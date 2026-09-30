@@ -51,6 +51,12 @@ public class CompanyController {
         CompanyResponseDto companyResponseDto = companyService.updateCompany(id, companyRequestDto, file);
         return ResponseEntity.status(HttpStatus.OK).body(companyResponseDto);
     }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteCompany(@PathVariable Long id) {
+        companyService.deleteCompany(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
     
 
 }

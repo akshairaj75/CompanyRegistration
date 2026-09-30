@@ -8,17 +8,19 @@ public class CompanyResponseDto {
 
     private Long id;
     private String companyName;
-    private String registrationNumber;
     private String email;
-    private String phone;
+    private String landline;
     private String address;
     private String city;
-    private String state;
     private String country;
     private String website;
     private String description;
     private String status;
     private String businessCard;
+    private String contactName;
+    private String contactDesignation;
+    private String contactEmail;
+    private String contactMobileNumber;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -39,14 +41,6 @@ public class CompanyResponseDto {
         this.companyName = companyName;
     }
 
-    public String getRegistrationNumber() {
-        return registrationNumber;
-    }
-
-    public void setRegistrationNumber(String registrationNumber) {
-        this.registrationNumber = registrationNumber;
-    }
-
     public String getEmail() {
         return email;
     }
@@ -55,12 +49,12 @@ public class CompanyResponseDto {
         this.email = email;
     }
 
-    public String getPhone() {
-        return phone;
+    public String getLandline() {
+        return landline;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setLandline(String landline) {
+        this.landline = landline;
     }
 
     public String getAddress() {
@@ -77,14 +71,6 @@ public class CompanyResponseDto {
 
     public void setCity(String city) {
         this.city = city;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
     }
 
     public String getCountry() {
@@ -127,6 +113,38 @@ public class CompanyResponseDto {
         this.businessCard = businessCard;
     }
 
+    public String getContactName() {
+        return contactName;
+    }
+
+    public void setContactName(String contactName) {
+        this.contactName = contactName;
+    }
+
+    public String getContactDesignation() {
+        return contactDesignation;
+    }
+
+    public void setContactDesignation(String contactDesignation) {
+        this.contactDesignation = contactDesignation;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getContactMobileNumber() {
+        return contactMobileNumber;
+    }
+
+    public void setContactMobileNumber(String contactMobileNumber) {
+        this.contactMobileNumber = contactMobileNumber;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -150,17 +168,19 @@ public class CompanyResponseDto {
         CompanyResponseDto response = new CompanyResponseDto();
         response.setId(company.getId());
         response.setCompanyName(company.getCompanyName());
-        response.setRegistrationNumber(company.getRegistrationNumber());
         response.setEmail(company.getEmail());
-        response.setPhone(company.getPhone());
+        response.setLandline(company.getLandline());
         response.setAddress(company.getAddress());
         response.setCity(company.getCity());
-        response.setState(company.getState());
         response.setCountry(company.getCountry());
         response.setWebsite(company.getWebsite());
         response.setDescription(company.getDescription());
         response.setStatus(company.getStatus());
         response.setBusinessCard(company.getBusinessCard());
+        response.setContactName(company.getContactName());
+        response.setContactDesignation(company.getContactDesignation());
+        response.setContactEmail(company.getContactEmail());
+        response.setContactMobileNumber(company.getContactMobileNumber());
         response.setCreatedAt(company.getCreatedAt());
         response.setUpdatedAt(company.getUpdatedAt());
         return response;

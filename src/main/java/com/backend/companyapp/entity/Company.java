@@ -16,23 +16,17 @@ public class Company {
     @Column(name = "company_name", nullable = false, length = 150)
     private String companyName;
 
-    @Column(name = "registration_number", unique = true, length = 100)
-    private String registrationNumber;
-
     @Column(length = 150)
     private String email;
 
     @Column(length = 30)
-    private String phone;
+    private String landline;
 
     @Column(length = 255)
     private String address;
 
     @Column(length = 100)
     private String city;
-
-    @Column(length = 100)
-    private String state;
 
     @Column(length = 100)
     private String country;
@@ -48,6 +42,18 @@ public class Company {
 
     @Column(name = "business_card", length = 255)
     private String businessCard;
+
+    @Column(name = "contact_name", length = 150)
+    private String contactName;
+
+    @Column(name = "contact_designation", length = 100)
+    private String contactDesignation;
+
+    @Column(name = "contact_email", length = 150)
+    private String contactEmail;
+
+    @Column(name = "contact_mobile_number", length = 30)
+    private String contactMobileNumber;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -99,14 +105,6 @@ public class Company {
         this.companyName = companyName;
     }
 
-    public String getRegistrationNumber() {
-        return registrationNumber;
-    }
-
-    public void setRegistrationNumber(String registrationNumber) {
-        this.registrationNumber = registrationNumber;
-    }
-
     public String getEmail() {
         return email;
     }
@@ -115,12 +113,12 @@ public class Company {
         this.email = email;
     }
 
-    public String getPhone() {
-        return phone;
+    public String getLandline() {
+        return landline;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setLandline(String landline) {
+        this.landline = landline;
     }
 
     public String getAddress() {
@@ -137,14 +135,6 @@ public class Company {
 
     public void setCity(String city) {
         this.city = city;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
     }
 
     public String getCountry() {
@@ -185,6 +175,38 @@ public class Company {
 
     public void setBusinessCard(String businessCard) {
         this.businessCard = businessCard;
+    }
+
+    public String getContactName() {
+        return contactName;
+    }
+
+    public void setContactName(String contactName) {
+        this.contactName = contactName;
+    }
+
+    public String getContactDesignation() {
+        return contactDesignation;
+    }
+
+    public void setContactDesignation(String contactDesignation) {
+        this.contactDesignation = contactDesignation;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getContactMobileNumber() {
+        return contactMobileNumber;
+    }
+
+    public void setContactMobileNumber(String contactMobileNumber) {
+        this.contactMobileNumber = contactMobileNumber;
     }
 
     public LocalDateTime getCreatedAt() {

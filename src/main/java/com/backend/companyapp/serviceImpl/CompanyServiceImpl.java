@@ -43,15 +43,21 @@ public class CompanyServiceImpl implements CompanyService {
 
         Company company = new Company();
         company.setCompanyName(companyRequestDto.getCompanyName());
-        company.setRegistrationNumber(companyRequestDto.getRegistrationNumber());
         company.setEmail(companyRequestDto.getEmail());
-        company.setPhone(companyRequestDto.getPhone());
+        company.setLandline(companyRequestDto.getLandline());
         company.setAddress(companyRequestDto.getAddress());
         company.setCity(companyRequestDto.getCity());
-        company.setState(companyRequestDto.getState());
         company.setCountry(companyRequestDto.getCountry());
         company.setWebsite(companyRequestDto.getWebsite());
         company.setDescription(companyRequestDto.getDescription());
+        if (companyRequestDto.getStatus() != null && !companyRequestDto.getStatus().trim().isEmpty()) {
+            company.setStatus(companyRequestDto.getStatus());
+        }
+        company.setContactName(companyRequestDto.getContactName());
+        company.setContactDesignation(companyRequestDto.getContactDesignation());
+        company.setContactEmail(companyRequestDto.getContactEmail());
+        company.setContactMobileNumber(companyRequestDto.getContactMobileNumber());
+
         if (file != null && !file.isEmpty()) {
             try {
                 fileName = fileStorageService.storeFile(file, "company_logos");
@@ -69,15 +75,21 @@ public class CompanyServiceImpl implements CompanyService {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found"));
         company.setCompanyName(companyRequestDto.getCompanyName());
-        company.setRegistrationNumber(companyRequestDto.getRegistrationNumber());
         company.setEmail(companyRequestDto.getEmail());
-        company.setPhone(companyRequestDto.getPhone());
+        company.setLandline(companyRequestDto.getLandline());
         company.setAddress(companyRequestDto.getAddress());
         company.setCity(companyRequestDto.getCity());
-        company.setState(companyRequestDto.getState());
         company.setCountry(companyRequestDto.getCountry());
         company.setWebsite(companyRequestDto.getWebsite());
         company.setDescription(companyRequestDto.getDescription());
+        if (companyRequestDto.getStatus() != null && !companyRequestDto.getStatus().trim().isEmpty()) {
+            company.setStatus(companyRequestDto.getStatus());
+        }
+        company.setContactName(companyRequestDto.getContactName());
+        company.setContactDesignation(companyRequestDto.getContactDesignation());
+        company.setContactEmail(companyRequestDto.getContactEmail());
+        company.setContactMobileNumber(companyRequestDto.getContactMobileNumber());
+
         if (file != null && !file.isEmpty()) {
             try {
                 String fileName = fileStorageService.storeFile(file, "company_logos");
@@ -88,6 +100,18 @@ public class CompanyServiceImpl implements CompanyService {
         }
         Company savedCompany = companyRepository.save(company);
         return CompanyResponseDto.fromEntity(savedCompany);
+    }
+
+    @Override
+    public void deleteCompany(Long id) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Company not found with id: " + id));
+        if (company.getBusinessCard() != null) {
+            fileStorageService.deleteFile(company.getBusinessCard(), "company_logos");
+        }
+        company.getBrands().clear();
+        company.getProducts().clear();
+        companyRepository.delete(company);
     }
 
 }

@@ -17,4 +17,6 @@ public interface CompanyService {
 
     CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, MultipartFile file);
 
+    void deleteCompany(Long id);
+
 }
