@@ -17,4 +17,5 @@ public interface ProductService {
 
     ProductResponseDto updateProduct(Long id, MultipartFile file, ProductRequestDto productRequestDto);
 
+    void deleteProduct(Long id);
 }

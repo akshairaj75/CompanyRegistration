@@ -1,5 +1,6 @@
 package com.backend.companyapp.dto.product;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.backend.companyapp.entity.Product;
 
 import java.time.LocalDateTime;
@@ -51,12 +52,18 @@ public class ProductResponseDto {
         this.image = image;
     }
 
+    @JsonProperty("isFeatured")
     public boolean isFeatured() {
         return isFeatured;
     }
 
+    @JsonProperty("isFeatured")
     public void setFeatured(boolean featured) {
         isFeatured = featured;
+    }
+
+    public void setIsFeatured(boolean isFeatured) {
+        this.isFeatured = isFeatured;
     }
 
     public Long getBrandId() {

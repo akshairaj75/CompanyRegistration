@@ -46,9 +46,11 @@ public class ProductController {
     @PostMapping("/create")
     public ResponseEntity<ProductResponseDto> createProduct(
             @RequestPart(name = "file", required = false) MultipartFile file,
-            @RequestPart(required = true) ProductRequestDto productRequestDto) {
+            @RequestPart(name = "data", required = false) ProductRequestDto dataDto,
+            @RequestPart(name = "productRequestDto", required = false) ProductRequestDto productRequestDto) {
+        ProductRequestDto dto = dataDto != null ? dataDto : productRequestDto;
         try {
-            ProductResponseDto productResponseDto = productService.createProduct(file, productRequestDto);
+            ProductResponseDto productResponseDto = productService.createProduct(file, dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(productResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -59,13 +61,24 @@ public class ProductController {
     public ResponseEntity<ProductResponseDto> updateProduct(
             @PathVariable Long id,
             @RequestPart(name = "file", required = false) MultipartFile file,
-            @RequestPart(required = true) ProductRequestDto productRequestDto) {
+            @RequestPart(name = "data", required = false) ProductRequestDto dataDto,
+            @RequestPart(name = "productRequestDto", required = false) ProductRequestDto productRequestDto) {
+        ProductRequestDto dto = dataDto != null ? dataDto : productRequestDto;
         try {
-            ProductResponseDto productResponseDto = productService.updateProduct(id, file, productRequestDto);
+            ProductResponseDto productResponseDto = productService.updateProduct(id, file, dto);
             return ResponseEntity.status(HttpStatus.OK).body(productResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        try {
+            productService.deleteProduct(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

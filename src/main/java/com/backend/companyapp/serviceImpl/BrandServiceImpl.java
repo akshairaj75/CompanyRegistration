@@ -77,4 +77,18 @@ public class BrandServiceImpl implements BrandService {
         return BrandResponseDto.fromEntity(brand);
     }
 
+    @Override
+    public void deleteBrand(Long id) {
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Brand not found with id: " + id));
+        if (brand.getBrandLogo() != null) {
+            fileStorageService.deleteFile(brand.getBrandLogo(), "brands");
+        }
+        for (com.backend.companyapp.entity.Company company : brand.getCompanies()) {
+            company.getBrands().remove(brand);
+        }
+        brand.getCompanies().clear();
+        brandRepository.delete(brand);
+    }
+
 }

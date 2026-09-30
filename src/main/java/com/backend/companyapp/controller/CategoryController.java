@@ -29,9 +29,11 @@ public class CategoryController {
     @PostMapping("/create")
     public ResponseEntity<CategoryResponseDto> createCategory(
         @RequestPart(name = "file", required = false) MultipartFile file, 
-        @RequestPart(required = true) CategoryRequestDto categoryRequestDto) {
+        @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
+        @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
+        CategoryRequestDto dto = dataDto != null ? dataDto : categoryRequestDto;
         try {
-            CategoryResponseDto categoryResponseDto = categoryService.createCategory(file, categoryRequestDto);
+            CategoryResponseDto categoryResponseDto = categoryService.createCategory(file, dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(categoryResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -65,12 +67,24 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDto> updateCategory(
         @PathVariable Long id, 
         @RequestPart(name = "file", required = false) MultipartFile file, 
-        @RequestPart(required = true) CategoryRequestDto categoryRequestDto) {
+        @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
+        @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
+        CategoryRequestDto dto = dataDto != null ? dataDto : categoryRequestDto;
         try {
-            CategoryResponseDto categoryResponseDto = categoryService.updateCategory(id, file, categoryRequestDto);
+            CategoryResponseDto categoryResponseDto = categoryService.updateCategory(id, file, dto);
             return ResponseEntity.status(HttpStatus.OK).body(categoryResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        try {
+            categoryService.deleteCategory(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

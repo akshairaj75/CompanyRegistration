@@ -1,5 +1,8 @@
 package com.backend.companyapp.dto.product;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ProductRequestDto {
 
     private String name;
@@ -34,12 +37,19 @@ public class ProductRequestDto {
         this.image = image;
     }
 
+    @JsonProperty("isFeatured")
     public boolean isFeatured() {
         return isFeatured;
     }
 
+    @JsonProperty("isFeatured")
+    @JsonAlias({"featured", "isFeatured"})
     public void setFeatured(boolean featured) {
         isFeatured = featured;
+    }
+
+    public void setIsFeatured(boolean isFeatured) {
+        this.isFeatured = isFeatured;
     }
 
     public Long getBrandId() {

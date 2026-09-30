@@ -60,12 +60,14 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
         product.setFeatured(productRequestDto.isFeatured());
 
-        try {
-            fileName = fileStorageService.storeFile(file, "products");
-            product.setImage(fileName);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to store product image", e);
+        if (file != null && !file.isEmpty()) {
+            try {
+                fileName = fileStorageService.storeFile(file, "products");
+                product.setImage(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to store product image", e);
+            }
         }
         Product savedProduct = productRepository.save(product);
         return ProductResponseDto.fromEntity(savedProduct);
@@ -94,11 +96,23 @@ public class ProductServiceImpl implements ProductService {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-                throw new RuntimeException("Failed to update brand logo", e);
+                throw new RuntimeException("Failed to update product image", e);
             }
         }
         Product savedProduct = productRepository.save(product);
         return ProductResponseDto.fromEntity(savedProduct);  
     }
 
+    @Override
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        if (product.getImage() != null && !product.getImage().trim().isEmpty()) {
+            fileStorageService.deleteFile(product.getImage(), "products");
+        }
+        if (product.getCompanies() != null) {
+            product.getCompanies().forEach(company -> company.getProducts().remove(product));
+            product.getCompanies().clear();
+        }
+        productRepository.delete(product);
+    }
 }

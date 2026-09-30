@@ -1,5 +1,6 @@
 package com.backend.companyapp.dto.brand;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.backend.companyapp.entity.Brand;
 
 public class BrandResponseDto {
@@ -34,12 +35,18 @@ public class BrandResponseDto {
         this.brandLogo = brandLogo;
     }
 
+    @JsonProperty("isFeatured")
     public boolean isFeatured() {
         return isFeatured;
     }
 
+    @JsonProperty("isFeatured")
     public void setFeatured(boolean featured) {
         isFeatured = featured;
+    }
+
+    public void setIsFeatured(boolean isFeatured) {
+        this.isFeatured = isFeatured;
     }
 
     public static BrandResponseDto fromEntity(Brand brand) {

@@ -25,21 +25,20 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryResponseDto createCategory(MultipartFile file, CategoryRequestDto categoryRequestDto) {
-
         Category category = new Category();
-
         category.setName(categoryRequestDto.getName());
-        String fileName;
-        try {
-            fileName = fileStorageService.storeFile(file, "categories");
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to store category image", e);
+
+        if (file != null && !file.isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(file, "categories");
+                category.setCategoryImage(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to store category image", e);
+            }
         }
-        category.setCategoryImage(fileName);
 
         Category savedCategory = categoryRepository.save(category);
-
         return CategoryResponseDto.fromEntity(savedCategory);
     }
 
@@ -52,16 +51,18 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryResponseDto updateCategory(Long id, MultipartFile file, CategoryRequestDto categoryRequestDto) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         category.setName(categoryRequestDto.getName());
-        String fileName;
-        try {
-            fileName = fileStorageService.storeFile(file, "categories");
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to store category image", e);
+
+        if (file != null && !file.isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(file, "categories");
+                category.setCategoryImage(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to store category image", e);
+            }
         }
-        category.setCategoryImage(fileName);
         Category savedCategory = categoryRepository.save(category);
         return CategoryResponseDto.fromEntity(savedCategory);
     }
@@ -69,8 +70,18 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public CategoryResponseDto getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         return CategoryResponseDto.fromEntity(category);
+    }
+
+    @Override
+    public void deleteCategory(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+        if (category.getCategoryImage() != null) {
+            fileStorageService.deleteFile(category.getCategoryImage(), "categories");
+        }
+        categoryRepository.delete(category);
     }
 
 }

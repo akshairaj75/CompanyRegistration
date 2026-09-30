@@ -40,9 +40,11 @@ public class BrandController {
     @PostMapping("/create")
     public ResponseEntity<BrandResponseDto> createBrand(
             @RequestPart(name = "file", required = false) MultipartFile file,
-            @RequestPart(required = true) BrandRequestDto brandRequestDto) {
+            @RequestPart(name = "data", required = false) BrandRequestDto dataDto,
+            @RequestPart(name = "brandRequestDto", required = false) BrandRequestDto brandRequestDto) {
+        BrandRequestDto dto = dataDto != null ? dataDto : brandRequestDto;
         try {
-            BrandResponseDto brandResponseDto = brandService.createBrand(file, brandRequestDto);
+            BrandResponseDto brandResponseDto = brandService.createBrand(file, dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(brandResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -53,12 +55,24 @@ public class BrandController {
     public ResponseEntity<BrandResponseDto> updateBrand(
             @PathVariable Long id,
             @RequestPart(name = "file", required = false) MultipartFile file,
-            @RequestPart(required = true) BrandRequestDto brandRequestDto) {
+            @RequestPart(name = "data", required = false) BrandRequestDto dataDto,
+            @RequestPart(name = "brandRequestDto", required = false) BrandRequestDto brandRequestDto) {
+        BrandRequestDto dto = dataDto != null ? dataDto : brandRequestDto;
         try {
-            BrandResponseDto brandResponseDto = brandService.updateBrand(id, file, brandRequestDto);
+            BrandResponseDto brandResponseDto = brandService.updateBrand(id, file, dto);
             return ResponseEntity.status(HttpStatus.OK).body(brandResponseDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteBrand(@PathVariable Long id) {
+        try {
+            brandService.deleteBrand(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

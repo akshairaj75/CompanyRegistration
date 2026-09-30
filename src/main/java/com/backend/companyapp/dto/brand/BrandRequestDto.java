@@ -1,6 +1,9 @@
 package com.backend.companyapp.dto.brand;
 
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class BrandRequestDto {
 
     private String brandName;
@@ -24,11 +27,18 @@ public class BrandRequestDto {
         this.brandLogo = brandLogo;
     }
 
+    @JsonProperty("isFeatured")
     public boolean isFeatured() {
         return isFeatured;
     }
 
+    @JsonProperty("isFeatured")
+    @JsonAlias({"featured", "isFeatured"})
     public void setFeatured(boolean featured) {
         isFeatured = featured;
+    }
+
+    public void setIsFeatured(boolean isFeatured) {
+        this.isFeatured = isFeatured;
     }
 }

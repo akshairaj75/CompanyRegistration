@@ -17,4 +17,6 @@ public interface BrandService {
 
     BrandResponseDto updateBrand(Long id, MultipartFile file, BrandRequestDto brandRequestDto);
 
+    void deleteBrand(Long id);
+
 }
