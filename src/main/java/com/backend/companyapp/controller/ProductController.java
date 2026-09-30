@@ -10,12 +10,11 @@ import com.backend.companyapp.dto.product.ProductRequestDto;
 import com.backend.companyapp.dto.product.ProductResponseDto;
 import com.backend.companyapp.service.ProductService;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/company-app/products")
 public class ProductController {
 
     private final ProductService productService;

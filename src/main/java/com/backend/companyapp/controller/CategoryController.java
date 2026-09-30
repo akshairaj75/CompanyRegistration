@@ -11,11 +11,13 @@ import com.backend.companyapp.dto.category.CategoryRequestDto;
 import com.backend.companyapp.dto.category.CategoryResponseDto;
 import com.backend.companyapp.service.CategoryService;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping("/api/company-app/categories")
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -35,6 +37,16 @@ public class CategoryController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    @PostMapping("/create/bulk")
+    public ResponseEntity<List<CategoryResponseDto>> createBulkCategories(
+        @RequestBody List<CategoryRequestDto> categoryRequestDtos) {
+        List<CategoryResponseDto> categoryResponseDtos = categoryRequestDtos.stream()
+        .map(categoryRequestDto -> categoryService.createCategory(null, categoryRequestDto))
+        .toList();
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoryResponseDtos);
+    }
+    
 
     @GetMapping("/get-all")
     public ResponseEntity<List<CategoryResponseDto>> getAllCategories() {

@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
-@RequestMapping("/api/companies")
+@RequestMapping("/api/company-app/companies")
 public class CompanyController {
 
     private final CompanyService companyService;
@@ -38,7 +38,7 @@ public class CompanyController {
     @PostMapping("/create")
     public ResponseEntity<CompanyResponseDto> createCompany(
         @RequestPart("data") CompanyRequestDto companyRequestDto,
-        @RequestPart("file") MultipartFile file) {
+        @RequestPart(name = "file", required = false) MultipartFile file) {
         CompanyResponseDto companyResponseDto = companyService.createCompany(companyRequestDto, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(companyResponseDto);
     }

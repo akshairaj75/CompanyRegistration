@@ -12,7 +12,7 @@ import com.backend.companyapp.dto.brand.BrandResponseDto;
 import com.backend.companyapp.service.BrandService;
 
 @RestController
-@RequestMapping("/api/brands")
+@RequestMapping("/api/company-app/brands")
 public class BrandController {
 
     private final BrandService brandService;

@@ -62,6 +62,7 @@ public class ProductServiceImpl implements ProductService {
 
         try {
             fileName = fileStorageService.storeFile(file, "products");
+            product.setImage(fileName);
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to store product image", e);

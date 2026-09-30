@@ -52,12 +52,13 @@ public class CompanyServiceImpl implements CompanyService {
         company.setCountry(companyRequestDto.getCountry());
         company.setWebsite(companyRequestDto.getWebsite());
         company.setDescription(companyRequestDto.getDescription());
-        try {
-            fileName = fileStorageService.storeFile(file, "company_logos");
-            company.setBusinessCard(fileName);
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (file != null && !file.isEmpty()) {
+            try {
+                fileName = fileStorageService.storeFile(file, "company_logos");
+                company.setBusinessCard(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         Company savedCompany = companyRepository.save(company);
         return CompanyResponseDto.fromEntity(savedCompany);
@@ -77,12 +78,13 @@ public class CompanyServiceImpl implements CompanyService {
         company.setCountry(companyRequestDto.getCountry());
         company.setWebsite(companyRequestDto.getWebsite());
         company.setDescription(companyRequestDto.getDescription());
-        try {
-            String fileName = fileStorageService.storeFile(file, "company_logos");
-            company.setBusinessCard(fileName);
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (file != null && !file.isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(file, "company_logos");
+                company.setBusinessCard(fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         Company savedCompany = companyRepository.save(company);
         return CompanyResponseDto.fromEntity(savedCompany);

@@ -1,6 +1,5 @@
 package com.backend.companyapp.dto.brand;
 
-import com.backend.companyapp.entity.Brand;
 
 public class BrandRequestDto {
 
