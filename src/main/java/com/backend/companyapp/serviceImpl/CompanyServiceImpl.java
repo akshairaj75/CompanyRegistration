@@ -1,6 +1,7 @@
 package com.backend.companyapp.serviceImpl;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -8,7 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.companyapp.dto.company.CompanyRequestDto;
 import com.backend.companyapp.dto.company.CompanyResponseDto;
+import com.backend.companyapp.entity.Brand;
 import com.backend.companyapp.entity.Company;
+import com.backend.companyapp.repository.BrandRepository;
 import com.backend.companyapp.repository.CompanyRepository;
 import com.backend.companyapp.service.CompanyService;
 
@@ -16,11 +19,14 @@ import com.backend.companyapp.service.CompanyService;
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final BrandRepository brandRepository;
     private final FileStorageService fileStorageService;
 
     public CompanyServiceImpl(CompanyRepository companyRepository,
+            BrandRepository brandRepository,
             FileStorageService fileStorageService) {
         this.companyRepository = companyRepository;
+        this.brandRepository = brandRepository;
         this.fileStorageService = fileStorageService;
     }
 
@@ -58,6 +64,11 @@ public class CompanyServiceImpl implements CompanyService {
         company.setContactEmail(companyRequestDto.getContactEmail());
         company.setContactMobileNumber(companyRequestDto.getContactMobileNumber());
 
+        if (companyRequestDto.getBrandIds() != null && !companyRequestDto.getBrandIds().isEmpty()) {
+            List<Brand> brands = brandRepository.findAllById(companyRequestDto.getBrandIds());
+            company.setBrands(new HashSet<>(brands));
+        }
+
         if (file != null && !file.isEmpty()) {
             try {
                 fileName = fileStorageService.storeFile(file, "company_logos");
@@ -89,6 +100,11 @@ public class CompanyServiceImpl implements CompanyService {
         company.setContactDesignation(companyRequestDto.getContactDesignation());
         company.setContactEmail(companyRequestDto.getContactEmail());
         company.setContactMobileNumber(companyRequestDto.getContactMobileNumber());
+
+        if (companyRequestDto.getBrandIds() != null) {
+            List<Brand> brands = brandRepository.findAllById(companyRequestDto.getBrandIds());
+            company.setBrands(new HashSet<>(brands));
+        }
 
         if (file != null && !file.isEmpty()) {
             try {

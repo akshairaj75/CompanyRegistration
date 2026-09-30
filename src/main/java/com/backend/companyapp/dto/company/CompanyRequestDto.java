@@ -16,8 +16,16 @@ public class CompanyRequestDto {
     private String contactDesignation;
     private String contactEmail;
     private String contactMobileNumber;
+    private java.util.List<Long> brandIds = new java.util.ArrayList<>();
 
     // Getters and Setters
+    public java.util.List<Long> getBrandIds() {
+        return brandIds;
+    }
+
+    public void setBrandIds(java.util.List<Long> brandIds) {
+        this.brandIds = brandIds;
+    }
     public String getCompanyName() {
         return companyName;
     }

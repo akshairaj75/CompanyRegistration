@@ -1,8 +1,12 @@
 package com.backend.companyapp.dto.company;
 
+import com.backend.companyapp.dto.brand.BrandResponseDto;
+import com.backend.companyapp.entity.Brand;
 import com.backend.companyapp.entity.Company;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CompanyResponseDto {
 
@@ -23,8 +27,25 @@ public class CompanyResponseDto {
     private String contactMobileNumber;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<Long> brandIds = new ArrayList<>();
+    private List<BrandResponseDto> brands = new ArrayList<>();
 
     // Getters and Setters
+    public List<Long> getBrandIds() {
+        return brandIds;
+    }
+
+    public void setBrandIds(List<Long> brandIds) {
+        this.brandIds = brandIds;
+    }
+
+    public List<BrandResponseDto> getBrands() {
+        return brands;
+    }
+
+    public void setBrands(List<BrandResponseDto> brands) {
+        this.brands = brands;
+    }
     public Long getId() {
         return id;
     }
@@ -183,6 +204,10 @@ public class CompanyResponseDto {
         response.setContactMobileNumber(company.getContactMobileNumber());
         response.setCreatedAt(company.getCreatedAt());
         response.setUpdatedAt(company.getUpdatedAt());
+        if (company.getBrands() != null) {
+            response.setBrandIds(company.getBrands().stream().map(Brand::getId).toList());
+            response.setBrands(company.getBrands().stream().map(BrandResponseDto::fromEntity).toList());
+        }
         return response;
     }
 }
