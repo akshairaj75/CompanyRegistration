@@ -17,6 +17,7 @@ public class CompanyRequestDto {
     private String contactEmail;
     private String contactMobileNumber;
     private java.util.List<Long> brandIds = new java.util.ArrayList<>();
+    private java.util.List<Long> productIds = new java.util.ArrayList<>();
 
     // Getters and Setters
     public java.util.List<Long> getBrandIds() {
@@ -25,6 +26,14 @@ public class CompanyRequestDto {
 
     public void setBrandIds(java.util.List<Long> brandIds) {
         this.brandIds = brandIds;
+    }
+
+    public java.util.List<Long> getProductIds() {
+        return productIds;
+    }
+
+    public void setProductIds(java.util.List<Long> productIds) {
+        this.productIds = productIds;
     }
     public String getCompanyName() {
         return companyName;

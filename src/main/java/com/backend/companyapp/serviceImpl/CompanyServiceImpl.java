@@ -11,8 +11,10 @@ import com.backend.companyapp.dto.company.CompanyRequestDto;
 import com.backend.companyapp.dto.company.CompanyResponseDto;
 import com.backend.companyapp.entity.Brand;
 import com.backend.companyapp.entity.Company;
+import com.backend.companyapp.entity.Product;
 import com.backend.companyapp.repository.BrandRepository;
 import com.backend.companyapp.repository.CompanyRepository;
+import com.backend.companyapp.repository.ProductRepository;
 import com.backend.companyapp.service.CompanyService;
 
 @Service
@@ -20,13 +22,16 @@ public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
     private final BrandRepository brandRepository;
+    private final ProductRepository productRepository;
     private final FileStorageService fileStorageService;
 
     public CompanyServiceImpl(CompanyRepository companyRepository,
             BrandRepository brandRepository,
+            ProductRepository productRepository,
             FileStorageService fileStorageService) {
         this.companyRepository = companyRepository;
         this.brandRepository = brandRepository;
+        this.productRepository = productRepository;
         this.fileStorageService = fileStorageService;
     }
 
@@ -69,6 +74,17 @@ public class CompanyServiceImpl implements CompanyService {
             company.setBrands(new HashSet<>(brands));
         }
 
+        if (companyRequestDto.getProductIds() != null && !companyRequestDto.getProductIds().isEmpty()) {
+            List<Product> products = productRepository.findAllById(companyRequestDto.getProductIds());
+            company.setProducts(new HashSet<>(products));
+            // Guarantee integrity: ensure brand of every chosen product is included in company brands
+            for (Product product : products) {
+                if (product.getBrand() != null) {
+                    company.getBrands().add(product.getBrand());
+                }
+            }
+        }
+
         if (file != null && !file.isEmpty()) {
             try {
                 fileName = fileStorageService.storeFile(file, "company_logos");
@@ -104,6 +120,17 @@ public class CompanyServiceImpl implements CompanyService {
         if (companyRequestDto.getBrandIds() != null) {
             List<Brand> brands = brandRepository.findAllById(companyRequestDto.getBrandIds());
             company.setBrands(new HashSet<>(brands));
+        }
+
+        if (companyRequestDto.getProductIds() != null) {
+            List<Product> products = productRepository.findAllById(companyRequestDto.getProductIds());
+            company.setProducts(new HashSet<>(products));
+            // Guarantee integrity: ensure brand of every chosen product is included in company brands
+            for (Product product : products) {
+                if (product.getBrand() != null) {
+                    company.getBrands().add(product.getBrand());
+                }
+            }
         }
 
         if (file != null && !file.isEmpty()) {

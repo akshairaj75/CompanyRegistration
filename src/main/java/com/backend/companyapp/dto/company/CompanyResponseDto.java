@@ -1,8 +1,10 @@
 package com.backend.companyapp.dto.company;
 
 import com.backend.companyapp.dto.brand.BrandResponseDto;
+import com.backend.companyapp.dto.product.ProductResponseDto;
 import com.backend.companyapp.entity.Brand;
 import com.backend.companyapp.entity.Company;
+import com.backend.companyapp.entity.Product;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,6 +31,8 @@ public class CompanyResponseDto {
     private LocalDateTime updatedAt;
     private List<Long> brandIds = new ArrayList<>();
     private List<BrandResponseDto> brands = new ArrayList<>();
+    private List<Long> productIds = new ArrayList<>();
+    private List<ProductResponseDto> products = new ArrayList<>();
 
     // Getters and Setters
     public List<Long> getBrandIds() {
@@ -45,6 +49,22 @@ public class CompanyResponseDto {
 
     public void setBrands(List<BrandResponseDto> brands) {
         this.brands = brands;
+    }
+
+    public List<Long> getProductIds() {
+        return productIds;
+    }
+
+    public void setProductIds(List<Long> productIds) {
+        this.productIds = productIds;
+    }
+
+    public List<ProductResponseDto> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<ProductResponseDto> products) {
+        this.products = products;
     }
     public Long getId() {
         return id;
@@ -207,6 +227,10 @@ public class CompanyResponseDto {
         if (company.getBrands() != null) {
             response.setBrandIds(company.getBrands().stream().map(Brand::getId).toList());
             response.setBrands(company.getBrands().stream().map(BrandResponseDto::fromEntity).toList());
+        }
+        if (company.getProducts() != null) {
+            response.setProductIds(company.getProducts().stream().map(Product::getId).toList());
+            response.setProducts(company.getProducts().stream().map(ProductResponseDto::fromEntity).toList());
         }
         return response;
     }
