@@ -16,6 +16,8 @@ public class ProductResponseDto {
     private String brandName;
     private Long categoryId;
     private String categoryName;
+    private Long subCategoryId;
+    private String subCategoryName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -98,6 +100,22 @@ public class ProductResponseDto {
         this.categoryName = categoryName;
     }
 
+    public Long getSubCategoryId() {
+        return subCategoryId;
+    }
+
+    public void setSubCategoryId(Long subCategoryId) {
+        this.subCategoryId = subCategoryId;
+    }
+
+    public String getSubCategoryName() {
+        return subCategoryName;
+    }
+
+    public void setSubCategoryName(String subCategoryName) {
+        this.subCategoryName = subCategoryName;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -135,6 +153,11 @@ public class ProductResponseDto {
         if (product.getCategory() != null) {
             response.setCategoryId(product.getCategory().getId());
             response.setCategoryName(product.getCategory().getName());
+        }
+
+        if (product.getSubCategory() != null) {
+            response.setSubCategoryId(product.getSubCategory().getId());
+            response.setSubCategoryName(product.getSubCategory().getName());
         }
 
         return response;

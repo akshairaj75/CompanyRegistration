@@ -4,6 +4,7 @@ public class CategoryRequestDto {
 
     private String name;
     private String categoryImage;
+    private Long parentId;
 
     // Getters and Setters
     public String getName() {
@@ -20,5 +21,13 @@ public class CategoryRequestDto {
 
     public void setCategoryImage(String categoryImage) {
         this.categoryImage = categoryImage;
+    }
+
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
     }
 }

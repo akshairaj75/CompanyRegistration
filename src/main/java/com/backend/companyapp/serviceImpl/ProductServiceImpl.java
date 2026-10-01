@@ -53,11 +53,21 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         String fileName;
 
+        Category subCategory = null;
+        if (productRequestDto.getSubCategoryId() != null) {
+            subCategory = categoryRepository.findById(productRequestDto.getSubCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Subcategory not found"));
+            if (subCategory.getParent() != null && !subCategory.getParent().getId().equals(category.getId())) {
+                throw new RuntimeException("Selected subcategory does not belong to the selected category");
+            }
+        }
+
         Product product = new Product();
         product.setName(productRequestDto.getName());
         product.setDescription(productRequestDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
+        product.setSubCategory(subCategory);
         product.setFeatured(productRequestDto.isFeatured());
 
         if (file != null && !file.isEmpty()) {
@@ -80,10 +90,20 @@ public class ProductServiceImpl implements ProductService {
         Brand brand = brandRepository.findById(productRequestDto.getBrandId()).orElseThrow(() -> new RuntimeException("Brand not found"));
         String fileName;
 
+        Category subCategory = null;
+        if (productRequestDto.getSubCategoryId() != null) {
+            subCategory = categoryRepository.findById(productRequestDto.getSubCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Subcategory not found"));
+            if (subCategory.getParent() != null && !subCategory.getParent().getId().equals(category.getId())) {
+                throw new RuntimeException("Selected subcategory does not belong to the selected category");
+            }
+        }
+
         product.setName(productRequestDto.getName());
         product.setDescription(productRequestDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
+        product.setSubCategory(subCategory);
         product.setFeatured(productRequestDto.isFeatured());
 
         if (file != null && !file.isEmpty()) {

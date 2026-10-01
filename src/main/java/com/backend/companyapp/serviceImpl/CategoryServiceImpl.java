@@ -28,6 +28,14 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = new Category();
         category.setName(categoryRequestDto.getName());
 
+        if (categoryRequestDto.getParentId() != null && categoryRequestDto.getParentId() > 0) {
+            Category parent = categoryRepository.findById(categoryRequestDto.getParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Parent category not found with id: " + categoryRequestDto.getParentId()));
+            category.setParent(parent);
+        } else {
+            category.setParent(null);
+        }
+
         if (file != null && !file.isEmpty()) {
             try {
                 String fileName = fileStorageService.storeFile(file, "categories");
@@ -53,6 +61,17 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         category.setName(categoryRequestDto.getName());
+
+        if (categoryRequestDto.getParentId() != null && categoryRequestDto.getParentId() > 0) {
+            if (categoryRequestDto.getParentId().equals(id)) {
+                throw new IllegalArgumentException("A category cannot be set as its own parent.");
+            }
+            Category parent = categoryRepository.findById(categoryRequestDto.getParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Parent category not found with id: " + categoryRequestDto.getParentId()));
+            category.setParent(parent);
+        } else {
+            category.setParent(null);
+        }
 
         if (file != null && !file.isEmpty()) {
             try {

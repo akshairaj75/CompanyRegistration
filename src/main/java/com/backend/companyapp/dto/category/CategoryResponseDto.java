@@ -7,6 +7,8 @@ public class CategoryResponseDto {
     private Long id;
     private String name;
     private String categoryImage;
+    private Long parentId;
+    private String parentName;
 
     // Getters and Setters
     public Long getId() {
@@ -33,6 +35,22 @@ public class CategoryResponseDto {
         this.categoryImage = categoryImage;
     }
 
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
+
+    public String getParentName() {
+        return parentName;
+    }
+
+    public void setParentName(String parentName) {
+        this.parentName = parentName;
+    }
+
     public static CategoryResponseDto fromEntity(Category category) {
         if (category == null) {
             return null;
@@ -41,6 +59,10 @@ public class CategoryResponseDto {
         response.setId(category.getId());
         response.setName(category.getName());
         response.setCategoryImage(category.getCategoryImage());
+        if (category.getParent() != null) {
+            response.setParentId(category.getParent().getId());
+            response.setParentName(category.getParent().getName());
+        }
         return response;
     }
 }

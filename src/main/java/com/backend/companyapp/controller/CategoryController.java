@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
-
 @RestController
 @RequestMapping("/api/company-app/categories")
 public class CategoryController {
@@ -28,9 +26,9 @@ public class CategoryController {
 
     @PostMapping("/create")
     public ResponseEntity<CategoryResponseDto> createCategory(
-        @RequestPart(name = "file", required = false) MultipartFile file, 
-        @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
-        @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
+            @RequestPart(name = "file", required = false) MultipartFile file,
+            @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
+            @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
         CategoryRequestDto dto = dataDto != null ? dataDto : categoryRequestDto;
         try {
             CategoryResponseDto categoryResponseDto = categoryService.createCategory(file, dto);
@@ -42,15 +40,14 @@ public class CategoryController {
 
     @PostMapping("/create/bulk")
     public ResponseEntity<List<CategoryResponseDto>> createBulkCategories(
-        @RequestBody List<CategoryRequestDto> categoryRequestDtos) {
+            @RequestBody List<CategoryRequestDto> categoryRequestDtos) {
         List<CategoryResponseDto> categoryResponseDtos = categoryRequestDtos.stream()
-        .map(categoryRequestDto -> categoryService.createCategory(null, categoryRequestDto))
-        .toList();
+                .map(categoryRequestDto -> categoryService.createCategory(null, categoryRequestDto))
+                .toList();
         return ResponseEntity.status(HttpStatus.CREATED).body(categoryResponseDtos);
     }
-    
 
-    @GetMapping("/get-all")
+    @GetMapping({"", "/get-all"})
     public ResponseEntity<List<CategoryResponseDto>> getAllCategories() {
         List<CategoryResponseDto> categoryResponseDtos = categoryService.getAllCategories();
         return ResponseEntity.status(HttpStatus.OK).body(categoryResponseDtos);
@@ -61,14 +58,13 @@ public class CategoryController {
         CategoryResponseDto categoryResponseDto = categoryService.getCategoryById(id);
         return ResponseEntity.status(HttpStatus.OK).body(categoryResponseDto);
     }
-    
-    
+
     @PutMapping("/update/{id}")
     public ResponseEntity<CategoryResponseDto> updateCategory(
-        @PathVariable Long id, 
-        @RequestPart(name = "file", required = false) MultipartFile file, 
-        @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
-        @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
+            @PathVariable Long id,
+            @RequestPart(name = "file", required = false) MultipartFile file,
+            @RequestPart(name = "data", required = false) CategoryRequestDto dataDto,
+            @RequestPart(name = "categoryRequestDto", required = false) CategoryRequestDto categoryRequestDto) {
         CategoryRequestDto dto = dataDto != null ? dataDto : categoryRequestDto;
         try {
             CategoryResponseDto categoryResponseDto = categoryService.updateCategory(id, file, dto);

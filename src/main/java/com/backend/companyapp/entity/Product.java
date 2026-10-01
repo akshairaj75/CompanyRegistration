@@ -39,6 +39,10 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subcategory_id", nullable = true)
+    private Category subCategory;
+
     @ManyToMany(mappedBy = "products")
     private Set<Company> companies = new HashSet<>();
     
@@ -125,6 +129,14 @@ public class Product {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    public Category getSubCategory() {
+        return subCategory;
+    }
+
+    public void setSubCategory(Category subCategory) {
+        this.subCategory = subCategory;
     }
 
     public Set<Company> getCompanies() {

@@ -16,6 +16,13 @@ public class Category {
     @Column(name = "category_image", length = 255)
     private String categoryImage;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Category parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = false)
+    private java.util.List<Category> children = new java.util.ArrayList<>();
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -39,5 +46,21 @@ public class Category {
 
     public void setCategoryImage(String categoryImage) {
         this.categoryImage = categoryImage;
+    }
+
+    public Category getParent() {
+        return parent;
+    }
+
+    public void setParent(Category parent) {
+        this.parent = parent;
+    }
+
+    public java.util.List<Category> getChildren() {
+        return children;
+    }
+
+    public void setChildren(java.util.List<Category> children) {
+        this.children = children;
     }
 }

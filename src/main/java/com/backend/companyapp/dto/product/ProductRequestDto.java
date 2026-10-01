@@ -11,6 +11,7 @@ public class ProductRequestDto {
     private boolean isFeatured;
     private Long brandId;
     private Long categoryId;
+    private Long subCategoryId;
 
     // Getters and Setters
     public String getName() {
@@ -66,5 +67,13 @@ public class ProductRequestDto {
 
     public void setCategoryId(Long categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public Long getSubCategoryId() {
+        return subCategoryId;
+    }
+
+    public void setSubCategoryId(Long subCategoryId) {
+        this.subCategoryId = subCategoryId;
     }
 }
