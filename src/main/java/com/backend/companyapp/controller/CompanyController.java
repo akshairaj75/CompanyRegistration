@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import com.backend.companyapp.dto.company.CompanyRequestDto;
 import com.backend.companyapp.dto.company.CompanyResponseDto;
 import com.backend.companyapp.service.CompanyExcelExportService;
+import com.backend.companyapp.service.CompanyPdfExportService;
 import com.backend.companyapp.service.CompanyService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,10 +28,14 @@ public class CompanyController {
 
     private final CompanyService companyService;
     private final CompanyExcelExportService companyExcelExportService;
+    private final CompanyPdfExportService companyPdfExportService;
 
-    public CompanyController(CompanyService companyService, CompanyExcelExportService companyExcelExportService) {
+    public CompanyController(CompanyService companyService, 
+                             CompanyExcelExportService companyExcelExportService,
+                             CompanyPdfExportService companyPdfExportService) {
         this.companyService = companyService;
         this.companyExcelExportService = companyExcelExportService;
+        this.companyPdfExportService = companyPdfExportService;
     }
 
     @GetMapping("/export/excel")
@@ -42,6 +47,18 @@ public class CompanyController {
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
             .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .body(file);
+    }
+
+    @GetMapping("/export/pdf")
+    public ResponseEntity<Resource> exportCompaniesToPdf() {
+        ByteArrayInputStream in = companyPdfExportService.exportCompaniesToPdf();
+        InputStreamResource file = new InputStreamResource(in);
+        String filename = "companies_directory_" + LocalDate.now() + ".pdf";
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .contentType(MediaType.APPLICATION_PDF)
             .body(file);
     }
 
