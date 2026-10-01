@@ -1,13 +1,21 @@
 package com.backend.companyapp.controller;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.backend.companyapp.dto.company.CompanyRequestDto;
 import com.backend.companyapp.dto.company.CompanyResponseDto;
+import com.backend.companyapp.service.CompanyExcelExportService;
 import com.backend.companyapp.service.CompanyService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,9 +26,23 @@ import org.springframework.web.multipart.MultipartFile;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final CompanyExcelExportService companyExcelExportService;
 
-    CompanyController(CompanyService companyService) {
+    public CompanyController(CompanyService companyService, CompanyExcelExportService companyExcelExportService) {
         this.companyService = companyService;
+        this.companyExcelExportService = companyExcelExportService;
+    }
+
+    @GetMapping("/export/excel")
+    public ResponseEntity<Resource> exportCompaniesToExcel() throws IOException {
+        ByteArrayInputStream in = companyExcelExportService.exportCompaniesToExcel();
+        InputStreamResource file = new InputStreamResource(in);
+        String filename = "companies_directory_" + LocalDate.now() + ".xlsx";
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .body(file);
     }
 
     @GetMapping("/get-all")
