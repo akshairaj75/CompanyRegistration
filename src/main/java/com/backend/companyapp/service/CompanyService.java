@@ -13,9 +13,9 @@ public interface CompanyService {
 
     CompanyResponseDto getCompanyById(Long id);
 
-    CompanyResponseDto createCompany(CompanyRequestDto companyRequestDto, MultipartFile file);
+    CompanyResponseDto createCompany(CompanyRequestDto companyRequestDto, List<MultipartFile> files);
 
-    CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, MultipartFile file);
+    CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, List<MultipartFile> files);
 
     void deleteCompany(Long id);
 

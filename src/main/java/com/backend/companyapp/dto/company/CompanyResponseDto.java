@@ -33,6 +33,7 @@ public class CompanyResponseDto {
     private List<BrandResponseDto> brands = new ArrayList<>();
     private List<Long> productIds = new ArrayList<>();
     private List<ProductResponseDto> products = new ArrayList<>();
+    private List<String> businessCards = new ArrayList<>();
 
     // Getters and Setters
     public List<Long> getBrandIds() {
@@ -57,6 +58,14 @@ public class CompanyResponseDto {
 
     public void setProductIds(List<Long> productIds) {
         this.productIds = productIds;
+    }
+
+    public List<String> getBusinessCards() {
+        return businessCards;
+    }
+
+    public void setBusinessCards(List<String> businessCards) {
+        this.businessCards = businessCards != null ? businessCards : new ArrayList<>();
     }
 
     public List<ProductResponseDto> getProducts() {
@@ -218,6 +227,16 @@ public class CompanyResponseDto {
         response.setDescription(company.getDescription());
         response.setStatus(company.getStatus());
         response.setBusinessCard(company.getBusinessCard());
+        List<String> cards = new ArrayList<>();
+        if (company.getBusinessCards() != null && !company.getBusinessCards().isEmpty()) {
+            cards.addAll(company.getBusinessCards());
+        } else if (company.getBusinessCard() != null && !company.getBusinessCard().trim().isEmpty()) {
+            cards.add(company.getBusinessCard());
+        }
+        response.setBusinessCards(cards);
+        if (response.getBusinessCard() == null && !cards.isEmpty()) {
+            response.setBusinessCard(cards.get(0));
+        }
         response.setContactName(company.getContactName());
         response.setContactDesignation(company.getContactDesignation());
         response.setContactEmail(company.getContactEmail());

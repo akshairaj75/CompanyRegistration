@@ -2,7 +2,9 @@ package com.backend.companyapp.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -42,6 +44,11 @@ public class Company {
 
     @Column(name = "business_card", length = 255)
     private String businessCard;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "company_business_cards", joinColumns = @JoinColumn(name = "company_id"))
+    @Column(name = "image_path")
+    private List<String> businessCards = new ArrayList<>();
 
     @Column(name = "contact_name", length = 150)
     private String contactName;
@@ -175,6 +182,14 @@ public class Company {
 
     public void setBusinessCard(String businessCard) {
         this.businessCard = businessCard;
+    }
+
+    public List<String> getBusinessCards() {
+        return businessCards;
+    }
+
+    public void setBusinessCards(List<String> businessCards) {
+        this.businessCards = businessCards != null ? businessCards : new ArrayList<>();
     }
 
     public String getContactName() {

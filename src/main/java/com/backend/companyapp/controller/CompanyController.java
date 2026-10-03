@@ -62,6 +62,18 @@ public class CompanyController {
             .body(file);
     }
 
+    @GetMapping("/{id}/export/pdf")
+    public ResponseEntity<Resource> exportCompanyProfilePdf(@PathVariable Long id) {
+        ByteArrayInputStream in = companyPdfExportService.exportSingleCompanyPdf(id);
+        InputStreamResource file = new InputStreamResource(in);
+        String filename = "company_" + id + "_profile.pdf";
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .contentType(MediaType.APPLICATION_PDF)
+            .body(file);
+    }
+
     @GetMapping("/get-all")
     public ResponseEntity<List<CompanyResponseDto>> getAllCompanies() {
         List<CompanyResponseDto> companyResponseDtos = companyService.getAllCompanies();
@@ -74,20 +86,38 @@ public class CompanyController {
         return ResponseEntity.status(HttpStatus.OK).body(companyResponseDto);
     }
 
-    @PostMapping("/create")
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponseDto> createCompany(
         @RequestPart("data") CompanyRequestDto companyRequestDto,
+        @RequestPart(name = "files", required = false) List<MultipartFile> files,
         @RequestPart(name = "file", required = false) MultipartFile file) {
-        CompanyResponseDto companyResponseDto = companyService.createCompany(companyRequestDto, file);
+        
+        List<MultipartFile> allFiles = new java.util.ArrayList<>();
+        if (files != null) {
+            allFiles.addAll(files);
+        }
+        if (file != null && !file.isEmpty()) {
+            allFiles.add(file);
+        }
+        CompanyResponseDto companyResponseDto = companyService.createCompany(companyRequestDto, allFiles);
         return ResponseEntity.status(HttpStatus.CREATED).body(companyResponseDto);
     }
 
-    @PutMapping("/update/{id}")
+    @PutMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponseDto> updateCompany(
         @PathVariable Long id, 
-        @RequestPart(name = "file", required = false) MultipartFile file,
-        @RequestPart(name = "data", required = true) CompanyRequestDto companyRequestDto) {
-        CompanyResponseDto companyResponseDto = companyService.updateCompany(id, companyRequestDto, file);
+        @RequestPart("data") CompanyRequestDto companyRequestDto,
+        @RequestPart(name = "files", required = false) List<MultipartFile> files,
+        @RequestPart(name = "file", required = false) MultipartFile file) {
+        
+        List<MultipartFile> allFiles = new java.util.ArrayList<>();
+        if (files != null) {
+            allFiles.addAll(files);
+        }
+        if (file != null && !file.isEmpty()) {
+            allFiles.add(file);
+        }
+        CompanyResponseDto companyResponseDto = companyService.updateCompany(id, companyRequestDto, allFiles);
         return ResponseEntity.status(HttpStatus.OK).body(companyResponseDto);
     }
 

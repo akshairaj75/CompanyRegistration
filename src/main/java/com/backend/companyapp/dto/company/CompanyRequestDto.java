@@ -18,8 +18,16 @@ public class CompanyRequestDto {
     private String contactMobileNumber;
     private java.util.List<Long> brandIds = new java.util.ArrayList<>();
     private java.util.List<Long> productIds = new java.util.ArrayList<>();
+    private java.util.List<String> existingBusinessCards = new java.util.ArrayList<>();
 
     // Getters and Setters
+    public java.util.List<String> getExistingBusinessCards() {
+        return existingBusinessCards;
+    }
+
+    public void setExistingBusinessCards(java.util.List<String> existingBusinessCards) {
+        this.existingBusinessCards = existingBusinessCards != null ? existingBusinessCards : new java.util.ArrayList<>();
+    }
     public java.util.List<Long> getBrandIds() {
         return brandIds;
     }

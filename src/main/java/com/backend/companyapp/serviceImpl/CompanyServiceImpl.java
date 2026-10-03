@@ -1,6 +1,7 @@
 package com.backend.companyapp.serviceImpl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -49,9 +50,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public CompanyResponseDto createCompany(CompanyRequestDto companyRequestDto, MultipartFile file) {
-        String fileName;
-
+    public CompanyResponseDto createCompany(CompanyRequestDto companyRequestDto, List<MultipartFile> files) {
         Company company = new Company();
         company.setCompanyName(companyRequestDto.getCompanyName());
         company.setEmail(companyRequestDto.getEmail());
@@ -85,20 +84,30 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
 
-        if (file != null && !file.isEmpty()) {
-            try {
-                fileName = fileStorageService.storeFile(file, "company_logos");
-                company.setBusinessCard(fileName);
-            } catch (IOException e) {
-                e.printStackTrace();
+        List<String> storedCards = new ArrayList<>();
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    try {
+                        String fileName = fileStorageService.storeFile(file, "company_logos");
+                        storedCards.add(fileName);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
+        company.setBusinessCards(storedCards);
+        if (!storedCards.isEmpty()) {
+            company.setBusinessCard(storedCards.get(0));
+        }
+
         Company savedCompany = companyRepository.save(company);
         return CompanyResponseDto.fromEntity(savedCompany);
     }
 
     @Override
-    public CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, MultipartFile file) {
+    public CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, List<MultipartFile> files) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found"));
         company.setCompanyName(companyRequestDto.getCompanyName());
@@ -133,14 +142,44 @@ public class CompanyServiceImpl implements CompanyService {
             }
         }
 
-        if (file != null && !file.isEmpty()) {
-            try {
-                String fileName = fileStorageService.storeFile(file, "company_logos");
-                company.setBusinessCard(fileName);
-            } catch (IOException e) {
-                e.printStackTrace();
+        List<String> currentCards = new ArrayList<>();
+        // Retain existing cards specified in request
+        if (companyRequestDto.getExistingBusinessCards() != null) {
+            currentCards.addAll(companyRequestDto.getExistingBusinessCards());
+        } else if (company.getBusinessCards() != null) {
+            currentCards.addAll(company.getBusinessCards());
+        }
+
+        // Delete any old files that were removed
+        if (company.getBusinessCards() != null) {
+            for (String oldCard : company.getBusinessCards()) {
+                if (!currentCards.contains(oldCard)) {
+                    fileStorageService.deleteFile(oldCard, "company_logos");
+                }
             }
         }
+
+        // Store and append any newly uploaded files
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    try {
+                        String fileName = fileStorageService.storeFile(file, "company_logos");
+                        currentCards.add(fileName);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        company.setBusinessCards(currentCards);
+        if (!currentCards.isEmpty()) {
+            company.setBusinessCard(currentCards.get(0));
+        } else {
+            company.setBusinessCard(null);
+        }
+
         Company savedCompany = companyRepository.save(company);
         return CompanyResponseDto.fromEntity(savedCompany);
     }
@@ -149,7 +188,13 @@ public class CompanyServiceImpl implements CompanyService {
     public void deleteCompany(Long id) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found with id: " + id));
-        if (company.getBusinessCard() != null) {
+        if (company.getBusinessCards() != null) {
+            for (String card : company.getBusinessCards()) {
+                fileStorageService.deleteFile(card, "company_logos");
+            }
+        }
+        if (company.getBusinessCard() != null && 
+            (company.getBusinessCards() == null || !company.getBusinessCards().contains(company.getBusinessCard()))) {
             fileStorageService.deleteFile(company.getBusinessCard(), "company_logos");
         }
         company.getBrands().clear();
