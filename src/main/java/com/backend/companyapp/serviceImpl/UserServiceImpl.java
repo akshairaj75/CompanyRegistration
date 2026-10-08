@@ -55,7 +55,7 @@ public class UserServiceImpl implements UserService {
         User savedUser = userRepository.save(user);
         String token = jwtService.generateToken(savedUser);
 
-        return AuthResponseDto.fromEntity(savedUser, token);
+        return AuthResponseDto.fromEntity(savedUser, token, jwtService.getExpirationDuration());
     }
 
     @Override
@@ -82,7 +82,7 @@ public class UserServiceImpl implements UserService {
         }
 
         String token = jwtService.generateToken(user);
-        return AuthResponseDto.fromEntity(user, token);
+        return AuthResponseDto.fromEntity(user, token, jwtService.getExpirationDuration());
     }
 
     @Override
@@ -95,6 +95,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
-        return AuthResponseDto.fromEntity(user, null);
+        return AuthResponseDto.fromEntity(user, null, 0);
     }
 }
+

@@ -1,7 +1,13 @@
 package com.backend.companyapp.dto.auth;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class LoginRequestDto {
+
+    @NotBlank(message = "Username or email is required")
     private String usernameOrEmail;
+
+    @NotBlank(message = "Password is required")
     private String password;
 
     public LoginRequestDto() {

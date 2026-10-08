@@ -80,14 +80,19 @@ public class AuthResponseDto {
         this.expiresIn = expiresIn;
     }
 
-    public static AuthResponseDto fromEntity(User user, String token) {
+    public static AuthResponseDto fromEntity(User user, String token, long expiresIn) {
         AuthResponseDto response = new AuthResponseDto();
         response.setToken(token);
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
         response.setFullName(user.getFullName());
-        response.setRole(user.getRole().toString());
-        response.setExpiresIn(3600000);
+        response.setRole(user.getRole() != null ? user.getRole().toString() : "COMPANY_USER");
+        response.setExpiresIn(expiresIn);
         return response;
     }
+
+    public static AuthResponseDto fromEntity(User user, String token) {
+        return fromEntity(user, token, 86400000L);
+    }
 }
+
