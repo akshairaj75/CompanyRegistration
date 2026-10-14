@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import com.backend.companyapp.dto.scraper.ScrapeProductsResponseDto;
+import com.backend.companyapp.service.WebScraperService;
+
 @RestController
 @RequestMapping("/api/company-app/companies")
 public class CompanyController {
@@ -29,13 +32,22 @@ public class CompanyController {
     private final CompanyService companyService;
     private final CompanyExcelExportService companyExcelExportService;
     private final CompanyPdfExportService companyPdfExportService;
+    private final WebScraperService webScraperService;
 
     public CompanyController(CompanyService companyService, 
                              CompanyExcelExportService companyExcelExportService,
-                             CompanyPdfExportService companyPdfExportService) {
+                             CompanyPdfExportService companyPdfExportService,
+                             WebScraperService webScraperService) {
         this.companyService = companyService;
         this.companyExcelExportService = companyExcelExportService;
         this.companyPdfExportService = companyPdfExportService;
+        this.webScraperService = webScraperService;
+    }
+
+    @PostMapping("/scrape-products")
+    public ResponseEntity<ScrapeProductsResponseDto> scrapeProductsFromWebsite(@RequestParam("url") String url) {
+        ScrapeProductsResponseDto response = webScraperService.scrapeProducts(url);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/export/excel")
