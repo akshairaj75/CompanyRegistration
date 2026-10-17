@@ -166,7 +166,7 @@ public class CompanyPdfExportService {
             String loc = "";
             if (company.getAddress() != null && !company.getAddress().trim().isEmpty()) loc += company.getAddress() + ", ";
             if (company.getCity() != null && !company.getCity().trim().isEmpty()) loc += company.getCity() + ", ";
-            loc += (company.getCountry() != null ? company.getCountry() : "Global");
+            loc += (company.getCountry() != null ? company.getCountry().name() : "Global");
             addInfoRow(rightCell, "Headquarters:", loc, labelFont, valFont);
 
             addInfoRow(rightCell, "Official Website:", (company.getWebsite() != null ? company.getWebsite() : "N/A"), labelFont, linkFont);
@@ -510,7 +510,7 @@ public class CompanyPdfExportService {
                 // Col 4: Location
                 Paragraph pLoc = new Paragraph();
                 String city = c.getCity() != null ? c.getCity().trim() : "";
-                String country = c.getCountry() != null ? c.getCountry().trim() : "";
+                String country = c.getCountry() != null ? c.getCountry().name() : "";
                 if (!city.isEmpty() || !country.isEmpty()) {
                     pLoc.add(new Chunk(city + (!city.isEmpty() && !country.isEmpty() ? ", " : "") + country, textFont));
                 } else {

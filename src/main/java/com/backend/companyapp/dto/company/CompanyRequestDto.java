@@ -1,5 +1,7 @@
 package com.backend.companyapp.dto.company;
 
+import com.backend.companyapp.enums.Country;
+
 public class CompanyRequestDto {
 
     private String companyName;
@@ -7,7 +9,7 @@ public class CompanyRequestDto {
     private String landline;
     private String address;
     private String city;
-    private String country;
+    private Country country;
     private String website;
     private String description;
     private String status;
@@ -83,11 +85,11 @@ public class CompanyRequestDto {
         this.city = city;
     }
 
-    public String getCountry() {
+    public Country getCountry() {
         return country;
     }
 
-    public void setCountry(String country) {
+    public void setCountry(Country country) {
         this.country = country;
     }
 

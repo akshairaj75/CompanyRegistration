@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.backend.companyapp.enums.Country;
 
 @Entity
 @Table(name = "companies")
@@ -30,8 +31,9 @@ public class Company {
     @Column(length = 100)
     private String city;
 
-    @Column(length = 100)
-    private String country;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "country", length = 50)
+    private Country country;
 
     @Column(length = 255)
     private String website;
@@ -144,11 +146,11 @@ public class Company {
         this.city = city;
     }
 
-    public String getCountry() {
+    public Country getCountry() {
         return country;
     }
 
-    public void setCountry(String country) {
+    public void setCountry(Country country) {
         this.country = country;
     }
 

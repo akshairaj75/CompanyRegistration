@@ -147,7 +147,7 @@ public class CompanyExcelExportService {
 
                 // Col 7: Country
                 Cell cell7 = row.createCell(7);
-                cell7.setCellValue(company.getCountry() != null ? company.getCountry() : "");
+                cell7.setCellValue(company.getCountry() != null ? company.getCountry().name() : "");
                 cell7.setCellStyle(rowStyle);
 
                 // Col 8: Website

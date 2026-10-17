@@ -5,6 +5,7 @@ import com.backend.companyapp.dto.product.ProductResponseDto;
 import com.backend.companyapp.entity.Brand;
 import com.backend.companyapp.entity.Company;
 import com.backend.companyapp.entity.Product;
+import com.backend.companyapp.enums.Country;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ public class CompanyResponseDto {
     private String landline;
     private String address;
     private String city;
-    private String country;
+    private Country country;
     private String website;
     private String description;
     private String status;
@@ -123,11 +124,11 @@ public class CompanyResponseDto {
         this.city = city;
     }
 
-    public String getCountry() {
+    public Country getCountry() {
         return country;
     }
 
-    public void setCountry(String country) {
+    public void setCountry(Country country) {
         this.country = country;
     }
 
