@@ -69,7 +69,8 @@ public class WebScraperService {
 
     public ScrapeProductsResponseDto scrapeProducts(String rawUrl) {
         if (rawUrl == null || rawUrl.trim().isEmpty()) {
-            return new ScrapeProductsResponseDto(rawUrl, rawUrl, Collections.emptyList(), "NONE", "Website URL is required.");
+            return new ScrapeProductsResponseDto(rawUrl, rawUrl, Collections.emptyList(), "NONE",
+                    "Website URL is required.");
         }
 
         String normalizedUrl = normalizeUrl(rawUrl.trim());
@@ -79,7 +80,8 @@ public class WebScraperService {
             validateUrlSafety(normalizedUrl);
         } catch (Exception e) {
             log.warn("Blocked unsafe URL: {} - Reason: {}", normalizedUrl, e.getMessage());
-            return new ScrapeProductsResponseDto(rawUrl, normalizedUrl, Collections.emptyList(), "BLOCKED", "URL rejected: " + e.getMessage());
+            return new ScrapeProductsResponseDto(rawUrl, normalizedUrl, Collections.emptyList(), "BLOCKED",
+                    "URL rejected: " + e.getMessage());
         }
 
         String initialHost = URI.create(normalizedUrl).getHost();
@@ -87,18 +89,22 @@ public class WebScraperService {
         List<ScrapedProductDto> allProducts = new ArrayList<>();
         Set<String> visitedUrls = new HashSet<>();
 
-        // Priority Queue for crawl tasks: Priority 1 (Product pages/feeds), Priority 2 (Category/Collection), Priority 3 (General/Pagination)
+        // Priority Queue for crawl tasks: Priority 1 (Product pages/feeds), Priority 2
+        // (Category/Collection), Priority 3 (General/Pagination)
         PriorityQueue<CrawlTask> queue = new PriorityQueue<>(Comparator.comparingInt(CrawlTask::getPriority));
 
-        // Step 1: Discover via Public Storefront Feeds (e.g. Shopify public /products.json)
+        // Step 1: Discover via Public Storefront Feeds (e.g. Shopify public
+        // /products.json)
         tryShopifyProductsJson(normalizedUrl, allProducts, strategiesUsed);
 
-        // Step 2: Discover via Sitemaps (/robots.txt and conventional /sitemap.xml locations)
+        // Step 2: Discover via Sitemaps (/robots.txt and conventional /sitemap.xml
+        // locations)
         if (allProducts.size() < maxProducts) {
             discoverFromSitemaps(normalizedUrl, initialHost, queue, strategiesUsed);
         }
 
-        // Add root URL as ultra-priority crawl seed (-1) to guarantee it is visited first
+        // Add root URL as ultra-priority crawl seed (-1) to guarantee it is visited
+        // first
         queue.add(new CrawlTask(normalizedUrl, 0, -1));
 
         int pagesVisited = 0;
@@ -144,7 +150,8 @@ public class WebScraperService {
                     strategiesUsed.add("HTML DOM");
                 }
 
-                // Discovery: Extract navigation menu tabs with top priority (0) and relevant internal links
+                // Discovery: Extract navigation menu tabs with top priority (0) and relevant
+                // internal links
                 if (currentTask.depth < maxDepth && allProducts.size() < maxProducts) {
                     discoverNavigationMenuLinks(doc, currentUrl, initialHost, queue, visitedUrls);
                     discoverInternalLinks(doc, currentUrl, initialHost, currentTask.depth + 1, queue, visitedUrls);
@@ -175,7 +182,8 @@ public class WebScraperService {
     }
 
     /**
-     * Safely executes an HTTP request, strictly validating any redirects against SSRF.
+     * Safely executes an HTTP request, strictly validating any redirects against
+     * SSRF.
      */
     public Document fetchSafely(String url, String allowedHost) {
         String currentUrl = url;
@@ -216,7 +224,8 @@ public class WebScraperService {
 
                 if (status >= 200 && status < 300) {
                     String contentType = response.contentType();
-                    if (contentType != null && !contentType.contains("text/html") && !contentType.contains("application/xhtml") && !contentType.contains("xml")) {
+                    if (contentType != null && !contentType.contains("text/html")
+                            && !contentType.contains("application/xhtml") && !contentType.contains("xml")) {
                         return null; // Don't parse PDFs, images, binaries
                     }
                     return response.parse();
@@ -232,12 +241,14 @@ public class WebScraperService {
     }
 
     /**
-     * Try extracting products from public storefront endpoints (e.g. Shopify /products.json).
+     * Try extracting products from public storefront endpoints (e.g. Shopify
+     * /products.json).
      */
     private void tryShopifyProductsJson(String baseUrl, List<ScrapedProductDto> products, Set<String> strategies) {
         try {
             URI uri = URI.create(baseUrl);
-            String endpoint = uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "") + "/products.json?limit=50";
+            String endpoint = uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "")
+                    + "/products.json?limit=50";
             validateUrlSafety(endpoint);
 
             Connection.Response res = Jsoup.connect(endpoint)
@@ -260,14 +271,16 @@ public class WebScraperService {
                                 image = item.get("images").get(0).path("src").asText("");
                             }
                             String price = "";
-                            if (item.has("variants") && item.get("variants").isArray() && item.get("variants").size() > 0) {
+                            if (item.has("variants") && item.get("variants").isArray()
+                                    && item.get("variants").size() > 0) {
                                 price = item.get("variants").get(0).path("price").asText("");
                             }
                             String desc = item.path("body_html").asText("");
                             // Strip html tags from description
                             desc = Jsoup.parse(desc).text();
 
-                            products.add(new ScrapedProductDto(cleanText(title), cleanText(desc), image, price, productUrl));
+                            products.add(
+                                    new ScrapedProductDto(cleanText(title), cleanText(desc), image, price, productUrl));
                         }
                     }
                     if (!products.isEmpty()) {
@@ -282,9 +295,11 @@ public class WebScraperService {
     }
 
     /**
-     * Discovers product and collection URLs from sitemaps via /robots.txt and conventional locations.
+     * Discovers product and collection URLs from sitemaps via /robots.txt and
+     * conventional locations.
      */
-    private void discoverFromSitemaps(String baseUrl, String initialHost, PriorityQueue<CrawlTask> queue, Set<String> strategies) {
+    private void discoverFromSitemaps(String baseUrl, String initialHost, PriorityQueue<CrawlTask> queue,
+            Set<String> strategies) {
         List<String> sitemapUrls = new ArrayList<>();
         URI uri = URI.create(baseUrl);
         String rootOrigin = uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
@@ -322,14 +337,17 @@ public class WebScraperService {
 
         int sitemapsChecked = 0;
         for (String sitemapUrl : sitemapUrls) {
-            if (sitemapsChecked >= 3) break;
+            if (sitemapsChecked >= 3)
+                break;
             sitemapsChecked++;
             parseSitemap(sitemapUrl, initialHost, queue, strategies, 0);
         }
     }
 
-    private void parseSitemap(String sitemapUrl, String initialHost, PriorityQueue<CrawlTask> queue, Set<String> strategies, int recurseDepth) {
-        if (recurseDepth > 2) return; // Prevent deep sitemap recursion
+    private void parseSitemap(String sitemapUrl, String initialHost, PriorityQueue<CrawlTask> queue,
+            Set<String> strategies, int recurseDepth) {
+        if (recurseDepth > 2)
+            return; // Prevent deep sitemap recursion
 
         try {
             validateUrlSafety(sitemapUrl);
@@ -341,7 +359,8 @@ public class WebScraperService {
                     .maxBodySize(4 * 1024 * 1024)
                     .execute();
 
-            if (res.statusCode() != 200) return;
+            if (res.statusCode() != 200)
+                return;
 
             Document xml = Jsoup.parse(res.body(), "", Parser.xmlParser());
 
@@ -352,7 +371,8 @@ public class WebScraperService {
                 for (Element loc : sitemaps) {
                     String subSitemap = loc.text().trim();
                     // Prioritize product/item sitemaps
-                    if (isProductUrl(subSitemap) || subSitemap.contains("product") || subSitemap.contains("shop") || subSitemap.contains("catalog")) {
+                    if (isProductUrl(subSitemap) || subSitemap.contains("product") || subSitemap.contains("shop")
+                            || subSitemap.contains("catalog")) {
                         parseSitemap(subSitemap, initialHost, queue, strategies, recurseDepth + 1);
                     }
                 }
@@ -371,7 +391,8 @@ public class WebScraperService {
                     queue.add(new CrawlTask(pageUrl, 1, 3)); // Priority 3 (Sitemap Category/Collection page)
                     addedCount++;
                 }
-                if (addedCount >= 40) break; // Bounded seed limit from sitemap
+                if (addedCount >= 40)
+                    break; // Bounded seed limit from sitemap
             }
 
             if (addedCount > 0) {
@@ -387,22 +408,26 @@ public class WebScraperService {
     /**
      * Prioritizes links in main navigation menus (<nav>, <header>, menu bars)
      * and links with anchor text matching 'Products', 'Catalogue', 'Services', etc.
-     * Enqueues them as Priority 0 so the crawler visits these essential pages FIRST.
+     * Enqueues them as Priority 0 so the crawler visits these essential pages
+     * FIRST.
      */
     public void discoverNavigationMenuLinks(Document doc, String currentUrl, String initialHost,
-                                            PriorityQueue<CrawlTask> queue, Set<String> visitedUrls) {
-        Elements menuContainers = doc.select("nav, header, [role='navigation'], .navbar, .nav, .menu, #menu, .navigation, .site-header, #header");
+            PriorityQueue<CrawlTask> queue, Set<String> visitedUrls) {
+        Elements menuContainers = doc.select(
+                "nav, header, [role='navigation'], .navbar, .nav, .menu, #menu, .navigation, .site-header, #header");
         Elements menuLinks = !menuContainers.isEmpty() ? menuContainers.select("a[href]") : doc.select("a[href]");
 
         int added = 0;
         for (Element a : menuLinks) {
-            if (added >= 40) break;
+            if (added >= 40)
+                break;
 
             String text = a.text().trim();
             String title = a.attr("title").trim();
             String href = a.attr("abs:href");
 
-            if (href.isEmpty() || href.contains("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+            if (href.isEmpty() || href.contains("#") || href.startsWith("javascript:") || href.startsWith("mailto:")
+                    || href.startsWith("tel:")) {
                 continue;
             }
 
@@ -429,30 +454,36 @@ public class WebScraperService {
     }
 
     public boolean isProductMenuText(String text) {
-        if (text == null || text.trim().isEmpty()) return false;
+        if (text == null || text.trim().isEmpty())
+            return false;
         String t = text.toLowerCase().trim();
         return t.equals("products") || t.equals("product") || t.equals("catalogue") || t.equals("catalog") ||
-               t.equals("our products") || t.equals("all products") || t.equals("shop") || t.equals("store") ||
-               t.equals("services") || t.equals("our services") || t.equals("solutions") || t.equals("our solutions") ||
-               t.equals("equipment") || t.equals("portfolio") || t.equals("collection") || t.equals("collections") ||
-               t.equals("categories") || t.equals("range") || t.equals("models") || t.equals("offerings") ||
-               t.equals("hardware") || t.equals("items") || t.equals("parts") || t.equals("devices") ||
-               t.startsWith("product") || t.endsWith("products") || t.startsWith("catalog") || t.startsWith("catalogue");
+                t.equals("our products") || t.equals("all products") || t.equals("shop") || t.equals("store") ||
+                t.equals("services") || t.equals("our services") || t.equals("solutions") || t.equals("our solutions")
+                ||
+                t.equals("equipment") || t.equals("portfolio") || t.equals("collection") || t.equals("collections") ||
+                t.equals("categories") || t.equals("range") || t.equals("models") || t.equals("offerings") ||
+                t.equals("hardware") || t.equals("items") || t.equals("parts") || t.equals("devices") ||
+                t.startsWith("product") || t.endsWith("products") || t.startsWith("catalog")
+                || t.startsWith("catalogue");
     }
 
     /**
-     * Discovers relevant internal links (products, collections, pagination) on a crawled page.
+     * Discovers relevant internal links (products, collections, pagination) on a
+     * crawled page.
      */
     private void discoverInternalLinks(Document doc, String currentUrl, String initialHost, int nextDepth,
-                                      PriorityQueue<CrawlTask> queue, Set<String> visitedUrls) {
+            PriorityQueue<CrawlTask> queue, Set<String> visitedUrls) {
         Elements links = doc.select("a[href]");
         int linksDiscovered = 0;
 
         for (Element a : links) {
-            if (linksDiscovered >= 50) break;
+            if (linksDiscovered >= 50)
+                break;
 
             String absHref = a.attr("abs:href");
-            if (absHref.isEmpty() || absHref.contains("#") || absHref.startsWith("javascript:") || absHref.startsWith("mailto:") || absHref.startsWith("tel:")) {
+            if (absHref.isEmpty() || absHref.contains("#") || absHref.startsWith("javascript:")
+                    || absHref.startsWith("mailto:") || absHref.startsWith("tel:")) {
                 continue;
             }
 
@@ -521,7 +552,8 @@ public class WebScraperService {
 
     private String stripTrackingParams(String url) {
         int qIdx = url.indexOf('?');
-        if (qIdx == -1) return url;
+        if (qIdx == -1)
+            return url;
         String base = url.substring(0, qIdx);
         String query = url.substring(qIdx + 1);
 
@@ -529,7 +561,8 @@ public class WebScraperService {
         List<String> retained = new ArrayList<>();
         for (String p : parts) {
             String lower = p.toLowerCase();
-            if (!lower.startsWith("utm_") && !lower.startsWith("fbclid") && !lower.startsWith("gclid") && !lower.startsWith("ref")) {
+            if (!lower.startsWith("utm_") && !lower.startsWith("fbclid") && !lower.startsWith("gclid")
+                    && !lower.startsWith("ref")) {
                 retained.add(p);
             }
         }
@@ -557,7 +590,8 @@ public class WebScraperService {
 
         // Prevent SSRF: resolve host IP address
         InetAddress address = InetAddress.getByName(host);
-        if (address.isLoopbackAddress() || address.isAnyLocalAddress() || address.isSiteLocalAddress() || address.isLinkLocalAddress()) {
+        if (address.isLoopbackAddress() || address.isAnyLocalAddress() || address.isSiteLocalAddress()
+                || address.isLinkLocalAddress()) {
             throw new SecurityException("Local/Private IP access is forbidden.");
         }
 
@@ -577,7 +611,8 @@ public class WebScraperService {
 
         for (Element script : jsonLdScripts) {
             String jsonContent = script.data();
-            if (jsonContent == null || jsonContent.trim().isEmpty()) continue;
+            if (jsonContent == null || jsonContent.trim().isEmpty())
+                continue;
 
             try {
                 JsonNode root = objectMapper.readTree(jsonContent);
@@ -596,7 +631,8 @@ public class WebScraperService {
             return;
         }
 
-        if (!node.isObject()) return;
+        if (!node.isObject())
+            return;
 
         // Check @graph array
         if (node.has("@graph") && node.get("@graph").isArray()) {
@@ -646,7 +682,8 @@ public class WebScraperService {
                 }
 
                 String productUrl = node.path("url").asText("");
-                list.add(new ScrapedProductDto(cleanText(name), cleanText(description), resolveAbsoluteUrl(image, baseUrl), price, resolveAbsoluteUrl(productUrl, baseUrl)));
+                list.add(new ScrapedProductDto(cleanText(name), cleanText(description),
+                        resolveAbsoluteUrl(image, baseUrl), price, resolveAbsoluteUrl(productUrl, baseUrl)));
             }
         }
     }
@@ -665,10 +702,13 @@ public class WebScraperService {
             String image = getMetaTag(doc, "og:image");
             String price = getMetaTag(doc, "product:price:amount");
             String currency = getMetaTag(doc, "product:price:currency");
-            String formattedPrice = (price != null && !price.isEmpty()) ? ((currency != null ? currency + " " : "") + price) : "";
+            String formattedPrice = (price != null && !price.isEmpty())
+                    ? ((currency != null ? currency + " " : "") + price)
+                    : "";
 
             if (title != null && !title.trim().isEmpty()) {
-                return new ScrapedProductDto(cleanText(title), cleanText(desc), resolveAbsoluteUrl(image, baseUrl), formattedPrice, baseUrl);
+                return new ScrapedProductDto(cleanText(title), cleanText(desc), resolveAbsoluteUrl(image, baseUrl),
+                        formattedPrice, baseUrl);
             }
         }
         return null;
@@ -725,11 +765,14 @@ public class WebScraperService {
         }
 
         for (Element card : cards) {
-            if (list.size() >= 40) break;
+            if (list.size() >= 40)
+                break;
 
-            Element titleEl = card.selectFirst("h2, h3, h4, .product-title, .title, .woocommerce-loop-product__title, a[class*='title'], [class*='name']");
+            Element titleEl = card.selectFirst(
+                    "h2, h3, h4, .product-title, .title, .woocommerce-loop-product__title, a[class*='title'], [class*='name']");
             String name = titleEl != null ? titleEl.text().trim() : "";
-            if (name.isEmpty() || name.length() < 3) continue;
+            if (name.isEmpty() || name.length() < 3)
+                continue;
 
             Element imgEl = card.selectFirst("img");
             String imgUrl = "";
@@ -744,7 +787,8 @@ public class WebScraperService {
             Element linkEl = card.selectFirst("a[href]");
             String productUrl = linkEl != null ? linkEl.attr("href") : "";
 
-            list.add(new ScrapedProductDto(cleanText(name), "", resolveAbsoluteUrl(imgUrl, baseUrl), price, resolveAbsoluteUrl(productUrl, baseUrl)));
+            list.add(new ScrapedProductDto(cleanText(name), "", resolveAbsoluteUrl(imgUrl, baseUrl), price,
+                    resolveAbsoluteUrl(productUrl, baseUrl)));
         }
 
         return list;
@@ -754,11 +798,13 @@ public class WebScraperService {
      * Efficiently matches scraped products with existing catalog products in batch.
      */
     public void enrichWithCatalogMatches(List<ScrapedProductDto> products) {
-        if (products.isEmpty()) return;
+        if (products.isEmpty())
+            return;
 
         // Fetch all catalog products once to avoid N+1 queries during a scan
         List<Product> catalog = productRepository.findAll();
-        if (catalog.isEmpty()) return;
+        if (catalog.isEmpty())
+            return;
 
         Map<String, Long> exactCatalogMap = new HashMap<>();
         for (Product p : catalog) {
@@ -768,14 +814,16 @@ public class WebScraperService {
         }
 
         for (ScrapedProductDto p : products) {
-            if (p.getName() == null || p.getName().trim().isEmpty()) continue;
+            if (p.getName() == null || p.getName().trim().isEmpty())
+                continue;
             String lowerName = p.getName().trim().toLowerCase();
 
             // 1. Exact Name Match
             if (exactCatalogMap.containsKey(lowerName)) {
                 p.setMatchedCatalogProductId(exactCatalogMap.get(lowerName));
             } else {
-                // 2. High-Confidence Substring Match (e.g. Catalog "iPhone 15", Scraped "Apple iPhone 15 128GB")
+                // 2. High-Confidence Substring Match (e.g. Catalog "iPhone 15", Scraped "Apple
+                // iPhone 15 128GB")
                 for (Product cp : catalog) {
                     String cName = cp.getName().trim().toLowerCase();
                     if (lowerName.contains(cName) && cName.length() >= 5) {
@@ -806,7 +854,8 @@ public class WebScraperService {
     }
 
     private String resolveAbsoluteUrl(String url, String baseUrl) {
-        if (url == null || url.trim().isEmpty()) return "";
+        if (url == null || url.trim().isEmpty())
+            return "";
         url = url.trim();
         if (url.startsWith("//")) {
             return "https:" + url;
@@ -822,7 +871,8 @@ public class WebScraperService {
     }
 
     private String cleanText(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         return text.replaceAll("\\s+", " ").trim();
     }
 
