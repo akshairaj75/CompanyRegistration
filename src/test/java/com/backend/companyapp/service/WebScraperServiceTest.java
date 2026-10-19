@@ -207,4 +207,18 @@ public class WebScraperServiceTest {
         assertThrows(SecurityException.class, () -> scraperService.validateUrlSafety("http://localhost:3000"));
         assertThrows(SecurityException.class, () -> scraperService.validateUrlSafety("ftp://example.com"));
     }
+
+    @Test
+    void testIsProductMenuText() {
+        assertTrue(scraperService.isProductMenuText("Products"));
+        assertTrue(scraperService.isProductMenuText("Catalogue"));
+        assertTrue(scraperService.isProductMenuText("Catalog"));
+        assertTrue(scraperService.isProductMenuText("Our Products"));
+        assertTrue(scraperService.isProductMenuText("Services"));
+        assertTrue(scraperService.isProductMenuText("Solutions"));
+        assertTrue(scraperService.isProductMenuText("Equipment"));
+        assertFalse(scraperService.isProductMenuText("About Us"));
+        assertFalse(scraperService.isProductMenuText("Contact"));
+        assertFalse(scraperService.isProductMenuText("Privacy Policy"));
+    }
 }

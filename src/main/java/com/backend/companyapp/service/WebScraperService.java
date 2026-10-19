@@ -98,8 +98,8 @@ public class WebScraperService {
             discoverFromSitemaps(normalizedUrl, initialHost, queue, strategiesUsed);
         }
 
-        // Add root URL as high-priority crawl seed if not already queued
-        queue.add(new CrawlTask(normalizedUrl, 0, 1));
+        // Add root URL as ultra-priority crawl seed (-1) to guarantee it is visited first
+        queue.add(new CrawlTask(normalizedUrl, 0, -1));
 
         int pagesVisited = 0;
 
@@ -144,8 +144,9 @@ public class WebScraperService {
                     strategiesUsed.add("HTML DOM");
                 }
 
-                // Discovery: If within depth limit, extract new relevant internal links
+                // Discovery: Extract navigation menu tabs with top priority (0) and relevant internal links
                 if (currentTask.depth < maxDepth && allProducts.size() < maxProducts) {
+                    discoverNavigationMenuLinks(doc, currentUrl, initialHost, queue, visitedUrls);
                     discoverInternalLinks(doc, currentUrl, initialHost, currentTask.depth + 1, queue, visitedUrls);
                 }
 
@@ -364,10 +365,10 @@ public class WebScraperService {
             for (Element loc : urls) {
                 String pageUrl = loc.text().trim();
                 if (isProductUrl(pageUrl)) {
-                    queue.add(new CrawlTask(pageUrl, 1, 1)); // Priority 1 (Product page)
+                    queue.add(new CrawlTask(pageUrl, 1, 2)); // Priority 2 (Sitemap Product page)
                     addedCount++;
                 } else if (isCategoryUrl(pageUrl)) {
-                    queue.add(new CrawlTask(pageUrl, 1, 2)); // Priority 2 (Category/Collection page)
+                    queue.add(new CrawlTask(pageUrl, 1, 3)); // Priority 3 (Sitemap Category/Collection page)
                     addedCount++;
                 }
                 if (addedCount >= 40) break; // Bounded seed limit from sitemap
@@ -384,6 +385,62 @@ public class WebScraperService {
     }
 
     /**
+     * Prioritizes links in main navigation menus (<nav>, <header>, menu bars)
+     * and links with anchor text matching 'Products', 'Catalogue', 'Services', etc.
+     * Enqueues them as Priority 0 so the crawler visits these essential pages FIRST.
+     */
+    public void discoverNavigationMenuLinks(Document doc, String currentUrl, String initialHost,
+                                            PriorityQueue<CrawlTask> queue, Set<String> visitedUrls) {
+        Elements menuContainers = doc.select("nav, header, [role='navigation'], .navbar, .nav, .menu, #menu, .navigation, .site-header, #header");
+        Elements menuLinks = !menuContainers.isEmpty() ? menuContainers.select("a[href]") : doc.select("a[href]");
+
+        int added = 0;
+        for (Element a : menuLinks) {
+            if (added >= 40) break;
+
+            String text = a.text().trim();
+            String title = a.attr("title").trim();
+            String href = a.attr("abs:href");
+
+            if (href.isEmpty() || href.contains("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+                continue;
+            }
+
+            String cleanUrl = stripTrackingParams(href);
+            if (visitedUrls.contains(cleanUrl)) {
+                continue;
+            }
+
+            try {
+                URI uri = URI.create(cleanUrl);
+                String host = uri.getHost();
+                if (host == null || (!host.equalsIgnoreCase(initialHost) && !host.endsWith("." + initialHost))) {
+                    continue;
+                }
+
+                // Check if text or title matches prominent catalog / product menu labels
+                if (isProductMenuText(text) || isProductMenuText(title) || isCategoryUrl(cleanUrl)) {
+                    queue.add(new CrawlTask(cleanUrl, 1, 0)); // Priority 0 (HIGHEST PRIORITY - Forced Menu Tab!)
+                    added++;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    public boolean isProductMenuText(String text) {
+        if (text == null || text.trim().isEmpty()) return false;
+        String t = text.toLowerCase().trim();
+        return t.equals("products") || t.equals("product") || t.equals("catalogue") || t.equals("catalog") ||
+               t.equals("our products") || t.equals("all products") || t.equals("shop") || t.equals("store") ||
+               t.equals("services") || t.equals("our services") || t.equals("solutions") || t.equals("our solutions") ||
+               t.equals("equipment") || t.equals("portfolio") || t.equals("collection") || t.equals("collections") ||
+               t.equals("categories") || t.equals("range") || t.equals("models") || t.equals("offerings") ||
+               t.equals("hardware") || t.equals("items") || t.equals("parts") || t.equals("devices") ||
+               t.startsWith("product") || t.endsWith("products") || t.startsWith("catalog") || t.startsWith("catalogue");
+    }
+
+    /**
      * Discovers relevant internal links (products, collections, pagination) on a crawled page.
      */
     private void discoverInternalLinks(Document doc, String currentUrl, String initialHost, int nextDepth,
@@ -392,7 +449,7 @@ public class WebScraperService {
         int linksDiscovered = 0;
 
         for (Element a : links) {
-            if (linksDiscovered >= 25) break;
+            if (linksDiscovered >= 50) break;
 
             String absHref = a.attr("abs:href");
             if (absHref.isEmpty() || absHref.contains("#") || absHref.startsWith("javascript:") || absHref.startsWith("mailto:") || absHref.startsWith("tel:")) {
@@ -413,7 +470,13 @@ public class WebScraperService {
                     continue;
                 }
 
-                if (isProductUrl(cleanUrl)) {
+                String aText = a.text().trim();
+                boolean isMenuText = isProductMenuText(aText) || isProductMenuText(a.attr("title"));
+
+                if (isMenuText) {
+                    queue.add(new CrawlTask(cleanUrl, nextDepth, 0)); // Priority 0 (Forced Product Tab!)
+                    linksDiscovered++;
+                } else if (isProductUrl(cleanUrl)) {
                     queue.add(new CrawlTask(cleanUrl, nextDepth, 1));
                     linksDiscovered++;
                 } else if (isCategoryUrl(cleanUrl)) {
@@ -432,6 +495,8 @@ public class WebScraperService {
         String lower = url.toLowerCase();
         return lower.contains("/product/") || lower.contains("/products/") || lower.contains("/p/") ||
                 lower.contains("/item/") || lower.contains("/items/") || lower.contains("/pd/") ||
+                lower.contains("/goods/") || lower.contains("/model/") || lower.contains("/device/") ||
+                lower.contains("/equipment/") || lower.contains("/detail/") || lower.contains("/details/") ||
                 lower.contains("-p-") || lower.matches(".*/[a-z0-9-]+-p[0-9]+.*");
     }
 
@@ -439,7 +504,12 @@ public class WebScraperService {
         String lower = url.toLowerCase();
         return lower.contains("/category/") || lower.contains("/categories/") || lower.contains("/c/") ||
                 lower.contains("/collection/") || lower.contains("/collections/") ||
-                lower.contains("/shop") || lower.contains("/catalog") || lower.contains("/store");
+                lower.contains("/shop") || lower.contains("/catalog") || lower.contains("/catalogue") ||
+                lower.contains("/store") || lower.contains("/products") || lower.contains("/our-products") ||
+                lower.contains("/all-products") || lower.contains("/services") || lower.contains("/solutions") ||
+                lower.contains("/equipment") || lower.contains("/portfolio") || lower.contains("/offerings") ||
+                lower.contains("/range") || lower.contains("/models") || lower.contains("/devices") ||
+                lower.contains("/hardware") || lower.contains("/brands");
     }
 
     private boolean isPaginationUrl(String url, String anchorText) {
@@ -612,10 +682,16 @@ public class WebScraperService {
 
         String[] cardSelectors = {
                 ".product-card", ".product-item", ".product-grid-item",
-                "li.product", ".product", "[data-product-id]",
+                "li.product", ".product", "[data-product-id]", "[data-product]",
                 ".shop-item", ".catalog-item", ".card-product",
                 ".grid-product", ".product-box", "article.product",
-                "[data-sku]", ".product-listing-item"
+                "[data-sku]", ".product-listing-item", ".item-card",
+                ".catalog-card", ".c-card", "[class*='productCard']",
+                "[class*='product-card']", "[class*='ProductCard']",
+                "[class*='product_item']", "[class*='product-item']",
+                "[class*='product_card']", "[class*='product-grid'] > div",
+                "[class*='products-grid'] > div", ".woocommerce ul.products li",
+                ".grid > .group", "table.products-table tr"
         };
 
         Elements cards = new Elements();
@@ -624,6 +700,27 @@ public class WebScraperService {
             if (found.size() >= 2) {
                 cards = found;
                 break;
+            }
+        }
+
+        // Structural fallback: check for any parent container with 3+ child elements
+        // where each child contains an image and a heading/link
+        if (cards.isEmpty()) {
+            Elements containers = doc.select(".grid, .row, ul, .catalog, .products, [class*='grid'], [class*='list']");
+            for (Element container : containers) {
+                Elements children = container.children();
+                if (children.size() >= 3) {
+                    int matchCount = 0;
+                    for (Element child : children) {
+                        if (child.selectFirst("img") != null && child.selectFirst("h2, h3, h4, h5, a[href]") != null) {
+                            matchCount++;
+                        }
+                    }
+                    if (matchCount >= 3) {
+                        cards = children;
+                        break;
+                    }
+                }
             }
         }
 
