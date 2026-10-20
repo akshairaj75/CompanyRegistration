@@ -76,7 +76,8 @@ public class CompanyServiceImpl implements CompanyService {
         if (companyRequestDto.getProductIds() != null && !companyRequestDto.getProductIds().isEmpty()) {
             List<Product> products = productRepository.findAllById(companyRequestDto.getProductIds());
             company.setProducts(new HashSet<>(products));
-            // Guarantee integrity: ensure brand of every chosen product is included in company brands
+            // Guarantee integrity: ensure brand of every chosen product is included in
+            // company brands
             for (Product product : products) {
                 if (product.getBrand() != null) {
                     company.getBrands().add(product.getBrand());
@@ -134,7 +135,8 @@ public class CompanyServiceImpl implements CompanyService {
         if (companyRequestDto.getProductIds() != null) {
             List<Product> products = productRepository.findAllById(companyRequestDto.getProductIds());
             company.setProducts(new HashSet<>(products));
-            // Guarantee integrity: ensure brand of every chosen product is included in company brands
+            // Guarantee integrity: ensure brand of every chosen product is included in
+            // company brands
             for (Product product : products) {
                 if (product.getBrand() != null) {
                     company.getBrands().add(product.getBrand());
@@ -193,8 +195,9 @@ public class CompanyServiceImpl implements CompanyService {
                 fileStorageService.deleteFile(card, "company_logos");
             }
         }
-        if (company.getBusinessCard() != null && 
-            (company.getBusinessCards() == null || !company.getBusinessCards().contains(company.getBusinessCard()))) {
+        if (company.getBusinessCard() != null &&
+                (company.getBusinessCards() == null
+                        || !company.getBusinessCards().contains(company.getBusinessCard()))) {
             fileStorageService.deleteFile(company.getBusinessCard(), "company_logos");
         }
         company.getBrands().clear();
