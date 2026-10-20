@@ -222,4 +222,108 @@ public class WebScraperServiceTest {
     assertFalse(scraperService.isProductMenuText("Contact"));
     assertFalse(scraperService.isProductMenuText("Privacy Policy"));
   }
+
+  @Test
+  void testExtractDomProductsFromNeroRender() throws Exception {
+    java.nio.file.Path path = java.nio.file.Path.of("target/rendered_nero.html");
+    String html;
+    if (java.nio.file.Files.exists(path)) {
+      html = java.nio.file.Files.readString(path);
+    } else {
+      // Fallback synthetic HTML matching Nero's structure
+      html = """
+          <div id="products-browser-products-grid" class="products-grid">
+            <article class="card--product" id="product-card-872630"
+              data-product-tracking='{"product_name":"Mecca 240V Single Vertical Heated Towel Rail Brushed Bronze","product_value":1815}'>
+              <figure class="product-main-image">
+                <img class="product-main-image" src="https://example.com/thumb.webp" />
+              </figure>
+              <a data-product-title href="/sa-en/products/mecca-towel-rail">
+                Mecca 240V Single Vertical Heated Towel Rail Brushed Bronze
+              </a>
+              <p class="product-rrp"><data value="1815">SAR 1,815.00</data></p>
+            </article>
+          </div>
+          """;
+    }
+
+    Document doc = Jsoup.parse(html, "https://nero.com.sa/sa-en/products");
+    List<ScrapedProductDto> products = scraperService.extractDomProducts(doc, "https://nero.com.sa/sa-en/products");
+
+    assertNotNull(products);
+    assertFalse(products.isEmpty());
+    assertTrue(products.stream().anyMatch(p -> p.getName().contains("Mecca") || p.getName().contains("Heated Towel Rail")));
+    assertTrue(products.stream().anyMatch(p -> p.getPrice().contains("1815") || p.getPrice().contains("SAR")));
+  }
+
+  @Test
+  void testExcludedUtilityLink() {
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/about-us", "About Us"));
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/contact", "Contact"));
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/privacy-policy", "Privacy Policy"));
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/terms-and-conditions", "Terms"));
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/login", "Login"));
+    assertTrue(scraperService.isExcludedUtilityLink("https://example.com/cart", "My Cart"));
+
+    assertFalse(scraperService.isExcludedUtilityLink("https://example.com/products", "Products"));
+    assertFalse(scraperService.isExcludedUtilityLink("https://example.com/collections/taps", "Tapware"));
+  }
+
+  @Test
+  void testNonProductFiltering() {
+    assertTrue(scraperService.isNonProductTitle("CEO"));
+    assertTrue(scraperService.isNonProductTitle("Managing Director"));
+    assertTrue(scraperService.isNonProductTitle("Founder & CEO"));
+    assertTrue(scraperService.isNonProductTitle("Bank Offer: 10% Discount"));
+    assertTrue(scraperService.isNonProductTitle("Non-Returnable Item"));
+    assertTrue(scraperService.isNonProductTitle("Customer Reviews"));
+
+    assertFalse(scraperService.isNonProductTitle("Stainless Steel Kitchen Sink"));
+    assertFalse(scraperService.isNonProductTitle("Single Lever Basin Mixer Tap"));
+  }
+
+  @Test
+  void testIsHostAllowed() {
+    assertTrue(scraperService.isHostAllowed("wilo.com", "www.wilo.com"));
+    assertTrue(scraperService.isHostAllowed("www.wilo.com", "wilo.com"));
+    assertTrue(scraperService.isHostAllowed("cms.media.wilo.com", "wilo.com"));
+    assertTrue(scraperService.isHostAllowed("wilo.com", "wilo.com"));
+
+    assertFalse(scraperService.isHostAllowed("google.com", "wilo.com"));
+    assertFalse(scraperService.isHostAllowed("evil-wilo.com", "wilo.com"));
+  }
+
+  @Test
+  void testExtractDomProductsFromWiloMarkup() {
+    String html = """
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div data-slot="root">
+            <div data-slot="body">
+              <a href="/ae/en/Catalogue/en/products/stratos-maxo-d_id5172">
+                <img src="https://cms.media.wilo.com/image1.png" />
+                <h4>Stratos MAXO-D</h4>
+              </a>
+            </div>
+          </div>
+          <div data-slot="root">
+            <div data-slot="body">
+              <a href="/ae/en/Catalogue/en/products/stratos-maxo-z_id5173">
+                <img src="https://cms.media.wilo.com/image2.png" />
+                <h4>Stratos MAXO-Z</h4>
+              </a>
+            </div>
+          </div>
+        </div>
+        """;
+
+    Document doc = Jsoup.parse(html, "https://wilo.com/ae/en/Catalogue/");
+    List<ScrapedProductDto> products = scraperService.extractDomProducts(doc, "https://wilo.com/ae/en/Catalogue/");
+
+    assertNotNull(products);
+    assertEquals(2, products.size());
+    assertEquals("Stratos MAXO-D", products.get(0).getName());
+    assertEquals("https://cms.media.wilo.com/image1.png", products.get(0).getImageUrl());
+    assertEquals("https://wilo.com/ae/en/Catalogue/en/products/stratos-maxo-d_id5172", products.get(0).getProductUrl());
+    assertEquals("Stratos MAXO-Z", products.get(1).getName());
+  }
 }

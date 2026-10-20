@@ -6,6 +6,12 @@ import com.backend.companyapp.entity.Product;
 import com.backend.companyapp.repository.ProductRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.options.LoadState;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -42,6 +48,9 @@ public class WebScraperService {
 
     @Value("${scraper.crawl-delay-ms:100}")
     private int crawlDelayMs = 100;
+
+    @Value("${scraper.playwright-enabled:true}")
+    private boolean playwrightEnabled = true;
 
     private final ProductRepository productRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -84,7 +93,9 @@ public class WebScraperService {
                     "URL rejected: " + e.getMessage());
         }
 
-        String initialHost = URI.create(normalizedUrl).getHost();
+        // Follow any initial canonical redirects (e.g. www.wilo.ae -> https://wilo.com/ae/en/)
+        String canonicalStartUrl = resolveLandingUrl(normalizedUrl);
+        String initialHost = URI.create(canonicalStartUrl).getHost();
         Set<String> strategiesUsed = new LinkedHashSet<>();
         List<ScrapedProductDto> allProducts = new ArrayList<>();
         Set<String> visitedUrls = new HashSet<>();
@@ -95,17 +106,17 @@ public class WebScraperService {
 
         // Step 1: Discover via Public Storefront Feeds (e.g. Shopify public
         // /products.json)
-        tryShopifyProductsJson(normalizedUrl, allProducts, strategiesUsed);
+        tryShopifyProductsJson(canonicalStartUrl, allProducts, strategiesUsed);
 
         // Step 2: Discover via Sitemaps (/robots.txt and conventional /sitemap.xml
         // locations)
         if (allProducts.size() < maxProducts) {
-            discoverFromSitemaps(normalizedUrl, initialHost, queue, strategiesUsed);
+            discoverFromSitemaps(canonicalStartUrl, initialHost, queue, strategiesUsed);
         }
 
-        // Add root URL as ultra-priority crawl seed (-1) to guarantee it is visited
+        // Add canonical start URL as ultra-priority crawl seed (-1) to guarantee it is visited
         // first
-        queue.add(new CrawlTask(normalizedUrl, 0, -1));
+        queue.add(new CrawlTask(canonicalStartUrl, 0, -1));
 
         int pagesVisited = 0;
 
@@ -150,6 +161,22 @@ public class WebScraperService {
                     strategiesUsed.add("HTML DOM");
                 }
 
+                // HYBRID FALLBACK: If static Jsoup found 0 products and page shows dynamic SPA / loader signals,
+                // render the page using headless Playwright to let JavaScript execute!
+                if (playwrightEnabled && domProds.isEmpty() && jsonLdProds.isEmpty() && ogProd == null
+                        && isDynamicOrEmptyPage(doc, currentUrl)) {
+                    log.info("Page {} exhibits dynamic SPA / JavaScript loader. Invoking headless browser...", currentUrl);
+                    Document renderedDoc = fetchWithPlaywright(currentUrl, initialHost);
+                    if (renderedDoc != null) {
+                        List<ScrapedProductDto> renderedProds = extractDomProducts(renderedDoc, currentUrl);
+                        if (!renderedProds.isEmpty()) {
+                            allProducts.addAll(renderedProds);
+                            strategiesUsed.add("Headless Browser (Playwright)");
+                            log.info("Discovered {} products via Playwright on {}", renderedProds.size(), currentUrl);
+                        }
+                    }
+                }
+
                 // Discovery: Extract navigation menu tabs with top priority (0) and relevant
                 // internal links
                 if (currentTask.depth < maxDepth && allProducts.size() < maxProducts) {
@@ -182,6 +209,56 @@ public class WebScraperService {
     }
 
     /**
+     * Resolves the canonical landing URL by following initial HTTP redirects (e.g. www.wilo.ae -> https://wilo.com/ae/en/).
+     * This ensures regional/country domains (.ae, .sa, .de) correctly follow enterprise domain forwards.
+     */
+    public String resolveLandingUrl(String url) {
+        String currentUrl = url;
+        int redirects = 0;
+        while (redirects < MAX_REDIRECTS) {
+            try {
+                validateUrlSafety(currentUrl);
+                Connection.Response resp = Jsoup.connect(currentUrl)
+                        .userAgent(USER_AGENT)
+                        .timeout(timeoutMs)
+                        .followRedirects(false)
+                        .ignoreHttpErrors(true)
+                        .execute();
+
+                if (resp.statusCode() >= 300 && resp.statusCode() < 400) {
+                    String loc = resp.header("Location");
+                    if (loc != null && !loc.trim().isEmpty()) {
+                        String nextUrl = resolveAbsoluteUrl(loc, currentUrl);
+                        validateUrlSafety(nextUrl);
+                        currentUrl = nextUrl;
+                        redirects++;
+                        continue;
+                    }
+                }
+                return currentUrl;
+            } catch (Exception e) {
+                return currentUrl;
+            }
+        }
+        return currentUrl;
+    }
+
+    /**
+     * Checks if a target host is within the allowed crawling scope of initialHost,
+     * seamlessly handling www vs non-www and subdomains.
+     */
+    public boolean isHostAllowed(String host, String initialHost) {
+        if (host == null || initialHost == null) return false;
+        if (host.equalsIgnoreCase(initialHost) || host.endsWith("." + initialHost)) return true;
+
+        String cleanHost = host.toLowerCase().replaceFirst("^www\\.", "");
+        String cleanInitial = initialHost.toLowerCase().replaceFirst("^www\\.", "");
+        if (cleanHost.equalsIgnoreCase(cleanInitial) || cleanHost.endsWith("." + cleanInitial)) return true;
+
+        return false;
+    }
+
+    /**
      * Safely executes an HTTP request, strictly validating any redirects against
      * SSRF.
      */
@@ -196,13 +273,23 @@ public class WebScraperService {
                 // Origin restriction check: must match domain or subdomain of allowedHost
                 URI uri = URI.create(currentUrl);
                 String host = uri.getHost();
-                if (host == null || (!host.equalsIgnoreCase(allowedHost) && !host.endsWith("." + allowedHost))) {
+                if (!isHostAllowed(host, allowedHost)) {
                     log.debug("Skipping out-of-domain URL: {}", currentUrl);
                     return null;
                 }
 
                 Connection.Response response = Jsoup.connect(currentUrl)
                         .userAgent(USER_AGENT)
+                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                        .header("Accept-Language", "en-US,en;q=0.9")
+                        .header("Sec-Ch-Ua", "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"")
+                        .header("Sec-Ch-Ua-Mobile", "?0")
+                        .header("Sec-Ch-Ua-Platform", "\"Windows\"")
+                        .header("Sec-Fetch-Dest", "document")
+                        .header("Sec-Fetch-Mode", "navigate")
+                        .header("Sec-Fetch-Site", "none")
+                        .header("Sec-Fetch-User", "?1")
+                        .header("Upgrade-Insecure-Requests", "1")
                         .timeout(timeoutMs)
                         .followRedirects(false)
                         .ignoreHttpErrors(true)
@@ -238,6 +325,76 @@ public class WebScraperService {
             }
         }
         return null;
+    }
+
+    /**
+     * Executes Playwright Headless Browser to fully render client-side JavaScript / SPA pages (HTMX, React, Vue, Angular).
+     */
+    public Document fetchWithPlaywright(String url, String allowedHost) {
+        try {
+            validateUrlSafety(url);
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            if (!isHostAllowed(host, allowedHost)) {
+                return null;
+            }
+
+            try (Playwright playwright = Playwright.create()) {
+                BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions().setHeadless(true);
+                try {
+                    launchOptions.setChannel("chrome");
+                } catch (Exception e1) {
+                    try {
+                        launchOptions.setChannel("msedge");
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                try (Browser browser = playwright.chromium().launch(launchOptions)) {
+                    BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                            .setUserAgent(USER_AGENT)
+                            .setViewportSize(1280, 800));
+                    Page page = context.newPage();
+                    page.navigate(url, new Page.NavigateOptions().setTimeout(25000));
+
+                    // Wait for dynamic frameworks (HTMX, Livewire, React, Vue, Angular) to populate content
+                    try {
+                        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(6000));
+                    } catch (Exception ignored) {
+                        page.waitForTimeout(3000);
+                    }
+
+                    // Gentle scroll to trigger any lazy-load / intersection observers
+                    try {
+                        page.evaluate("window.scrollBy(0, 500)");
+                        page.waitForTimeout(1000);
+                    } catch (Exception ignored) {
+                    }
+
+                    String renderedHtml = page.content();
+                    if (renderedHtml != null && !renderedHtml.trim().isEmpty()) {
+                        return Jsoup.parse(renderedHtml, url);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Playwright headless render failed for {}: {}", url, e.getMessage());
+        }
+        return null;
+    }
+
+    public boolean isDynamicOrEmptyPage(Document doc, String url) {
+        if (doc == null) return false;
+        String lowerUrl = url.toLowerCase();
+        boolean isLikelyProductUrl = lowerUrl.contains("/product") || lowerUrl.contains("/shop")
+                || lowerUrl.contains("/catalog") || lowerUrl.contains("/collection");
+
+        boolean hasLoader = doc.selectFirst(".products-grid-loader, [class*='loader'], [class*='spinner'], [id*='loader'], [class*='loading']") != null;
+        boolean hasDynamicGrid = doc.selectFirst("#products-browser-products-grid, [id*='products-grid'], [class*='products-grid']:empty") != null;
+        boolean hasSpaRoot = doc.selectFirst("#root:empty, #app:empty, #__next:empty, [data-reactroot], [data-server-rendered]") != null;
+        boolean hasDynamicScripts = doc.selectFirst("script[src*='htmx'], script[src*='sprig'], script[src*='react'], script[src*='vue'], script[src*='angular']") != null;
+
+        return isLikelyProductUrl || hasLoader || hasDynamicGrid || hasSpaRoot || hasDynamicScripts;
     }
 
     /**
@@ -419,7 +576,7 @@ public class WebScraperService {
 
         int added = 0;
         for (Element a : menuLinks) {
-            if (added >= 40)
+            if (added >= 50)
                 break;
 
             String text = a.text().trim();
@@ -432,25 +589,63 @@ public class WebScraperService {
             }
 
             String cleanUrl = stripTrackingParams(href);
-            if (visitedUrls.contains(cleanUrl)) {
+            if (visitedUrls.contains(cleanUrl) || isExcludedUtilityLink(cleanUrl, text)) {
                 continue;
             }
-
             try {
                 URI uri = URI.create(cleanUrl);
                 String host = uri.getHost();
-                if (host == null || (!host.equalsIgnoreCase(initialHost) && !host.endsWith("." + initialHost))) {
+                if (!isHostAllowed(host, initialHost)) {
                     continue;
                 }
 
-                // Check if text or title matches prominent catalog / product menu labels
-                if (isProductMenuText(text) || isProductMenuText(title) || isCategoryUrl(cleanUrl)) {
+                // Check if text or title matches prominent catalog / product menu labels or category URL
+                if (isProductMenuText(text) || isProductMenuText(title) || isCategoryUrl(cleanUrl) || isProductUrl(cleanUrl)) {
                     queue.add(new CrawlTask(cleanUrl, 1, 0)); // Priority 0 (HIGHEST PRIORITY - Forced Menu Tab!)
+                    added++;
+                } else if (!cleanUrl.equalsIgnoreCase(currentUrl) && !cleanUrl.equals(currentUrl + "/")) {
+                    queue.add(new CrawlTask(cleanUrl, 1, 0));
                     added++;
                 }
             } catch (Exception ignored) {
             }
         }
+    }
+
+    public boolean isExcludedUtilityLink(String url, String text) {
+        String lowerUrl = url.toLowerCase();
+        String lowerText = text == null ? "" : text.trim().toLowerCase();
+
+        // Check path patterns
+        if (lowerUrl.contains("/about") || lowerUrl.contains("/contact") || lowerUrl.contains("/privacy") ||
+            lowerUrl.contains("/terms") || lowerUrl.contains("/faq") || lowerUrl.contains("/help") ||
+            lowerUrl.contains("/career") || lowerUrl.contains("/jobs") || lowerUrl.contains("/login") ||
+            lowerUrl.contains("/register") || lowerUrl.contains("/signin") || lowerUrl.contains("/signup") ||
+            lowerUrl.contains("/cart") || lowerUrl.contains("/checkout") || lowerUrl.contains("/account") ||
+            lowerUrl.contains("/order") || lowerUrl.contains("/wishlist") || lowerUrl.contains("/track") ||
+            lowerUrl.contains("/press") || lowerUrl.contains("/news") || lowerUrl.contains("/blog") ||
+            lowerUrl.contains("/feedback") || lowerUrl.contains("/locator") || lowerUrl.contains("/stockist") ||
+            lowerUrl.contains("/showroom") || lowerUrl.contains("/warranty") || lowerUrl.contains("/recall") ||
+            lowerUrl.contains("/search") || lowerUrl.contains("/team") || lowerUrl.contains("/leadership") ||
+            lowerUrl.contains("/investor") || lowerUrl.contains("/csr")) {
+            return true;
+        }
+
+        // Check anchor text patterns
+        if (lowerText.equals("about us") || lowerText.equals("about") || lowerText.equals("contact us") ||
+            lowerText.equals("contact") || lowerText.equals("privacy policy") || lowerText.equals("terms of use") ||
+            lowerText.equals("terms & conditions") || lowerText.equals("faq") || lowerText.equals("faqs") ||
+            lowerText.equals("help") || lowerText.equals("careers") || lowerText.equals("jobs") ||
+            lowerText.equals("login") || lowerText.equals("sign in") || lowerText.equals("sign up") ||
+            lowerText.equals("cart") || lowerText.equals("checkout") || lowerText.equals("my account") ||
+            lowerText.equals("wishlist") || lowerText.equals("search") || lowerText.equals("showroom") ||
+            lowerText.equals("warranty") || lowerText.equals("recall") || lowerText.equals("stockists") ||
+            lowerText.equals("support") || lowerText.equals("our team") || lowerText.equals("leadership") ||
+            lowerText.equals("board of directors")) {
+            return true;
+        }
+
+        return false;
     }
 
     public boolean isProductMenuText(String text) {
@@ -462,10 +657,10 @@ public class WebScraperService {
                 t.equals("services") || t.equals("our services") || t.equals("solutions") || t.equals("our solutions")
                 ||
                 t.equals("equipment") || t.equals("portfolio") || t.equals("collection") || t.equals("collections") ||
-                t.equals("categories") || t.equals("range") || t.equals("models") || t.equals("offerings") ||
+                t.equals("featured collections") || t.equals("all collections") ||
+                t.equals("categories") || t.equals("range") || t.equals("our range") || t.equals("models") || t.equals("offerings") ||
                 t.equals("hardware") || t.equals("items") || t.equals("parts") || t.equals("devices") ||
-                t.startsWith("product") || t.endsWith("products") || t.startsWith("catalog")
-                || t.startsWith("catalogue");
+                t.contains("product") || t.contains("catalog") || t.contains("collection") || t.contains("category");
     }
 
     /**
@@ -490,14 +685,13 @@ public class WebScraperService {
             // Remove query params like tracking/session
             String cleanUrl = stripTrackingParams(absHref);
 
-            if (visitedUrls.contains(cleanUrl)) {
+            if (visitedUrls.contains(cleanUrl) || isExcludedUtilityLink(cleanUrl, a.text())) {
                 continue;
             }
-
             try {
                 URI uri = URI.create(cleanUrl);
                 String host = uri.getHost();
-                if (host == null || (!host.equalsIgnoreCase(initialHost) && !host.endsWith("." + initialHost))) {
+                if (!isHostAllowed(host, initialHost)) {
                     continue;
                 }
 
@@ -533,14 +727,16 @@ public class WebScraperService {
 
     private boolean isCategoryUrl(String url) {
         String lower = url.toLowerCase();
-        return lower.contains("/category/") || lower.contains("/categories/") || lower.contains("/c/") ||
-                lower.contains("/collection/") || lower.contains("/collections/") ||
+        return lower.contains("/category") || lower.contains("/categories") || lower.contains("/c/") ||
+                lower.contains("/collection") || lower.contains("/collections") ||
                 lower.contains("/shop") || lower.contains("/catalog") || lower.contains("/catalogue") ||
                 lower.contains("/store") || lower.contains("/products") || lower.contains("/our-products") ||
                 lower.contains("/all-products") || lower.contains("/services") || lower.contains("/solutions") ||
                 lower.contains("/equipment") || lower.contains("/portfolio") || lower.contains("/offerings") ||
                 lower.contains("/range") || lower.contains("/models") || lower.contains("/devices") ||
-                lower.contains("/hardware") || lower.contains("/brands");
+                lower.contains("/hardware") || lower.contains("/brands") ||
+                lower.contains("/tapware") || lower.contains("/showers") || lower.contains("/bathroom") ||
+                lower.contains("/grocery") || lower.contains("/beverage") || lower.contains("/food");
     }
 
     private boolean isPaginationUrl(String url, String anchorText) {
@@ -721,6 +917,11 @@ public class WebScraperService {
         List<ScrapedProductDto> list = new ArrayList<>();
 
         String[] cardSelectors = {
+                "article.card--product", "article[class*='card--product']", "[id^='product-card-']",
+                "[data-product-tracking]", "[data-object-id][class*='product']",
+                "[data-slot='root']:has(a[href*='/product'])",
+                "a[href*='/products/']:has(img)", "a[href*='/product/']:has(img)",
+                "a[href*='/item/']:has(img)", "a[href*='/p/']:has(img)",
                 ".product-card", ".product-item", ".product-grid-item",
                 "li.product", ".product", "[data-product-id]", "[data-product]",
                 ".shop-item", ".catalog-item", ".card-product",
@@ -737,6 +938,13 @@ public class WebScraperService {
         Elements cards = new Elements();
         for (String selector : cardSelectors) {
             Elements found = doc.select(selector);
+            if (found.size() >= 1) {
+                // If it's a specific product card selector and matches, use it
+                if (selector.contains("product") || selector.contains("sku") || selector.contains("item")) {
+                    cards = found;
+                    break;
+                }
+            }
             if (found.size() >= 2) {
                 cards = found;
                 break;
@@ -748,6 +956,9 @@ public class WebScraperService {
         if (cards.isEmpty()) {
             Elements containers = doc.select(".grid, .row, ul, .catalog, .products, [class*='grid'], [class*='list']");
             for (Element container : containers) {
+                if (isNonProductContainer(container)) {
+                    continue;
+                }
                 Elements children = container.children();
                 if (children.size() >= 3) {
                     int matchCount = 0;
@@ -765,33 +976,127 @@ public class WebScraperService {
         }
 
         for (Element card : cards) {
-            if (list.size() >= 40)
+            if (list.size() >= 60)
                 break;
 
-            Element titleEl = card.selectFirst(
-                    "h2, h3, h4, .product-title, .title, .woocommerce-loop-product__title, a[class*='title'], [class*='name']");
-            String name = titleEl != null ? titleEl.text().trim() : "";
-            if (name.isEmpty() || name.length() < 3)
+            if (isNonProductContainer(card)) {
                 continue;
-
-            Element imgEl = card.selectFirst("img");
-            String imgUrl = "";
-            if (imgEl != null) {
-                imgUrl = imgEl.hasAttr("data-src") ? imgEl.attr("data-src")
-                        : (imgEl.hasAttr("srcset") ? imgEl.attr("srcset").split(" ")[0] : imgEl.attr("src"));
             }
 
-            Element priceEl = card.selectFirst(".price, .product-price, .amount, span[class*='price']");
-            String price = priceEl != null ? priceEl.text().trim() : "";
+            String name = "";
+            String price = "";
+            String imgUrl = "";
+            String productUrl = "";
 
-            Element linkEl = card.selectFirst("a[href]");
-            String productUrl = linkEl != null ? linkEl.attr("href") : "";
+            // Check if card has embedded JSON tracking metadata (common in modern CMS like Craft/Algolia)
+            if (card.hasAttr("data-product-tracking")) {
+                try {
+                    JsonNode tracking = objectMapper.readTree(card.attr("data-product-tracking"));
+                    if (tracking.has("product_name") && !tracking.get("product_name").asText().isEmpty()) {
+                        name = tracking.get("product_name").asText();
+                    }
+                    if (tracking.has("product_value") && !tracking.get("product_value").isNull()) {
+                        price = "SAR " + tracking.get("product_value").asText();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
 
-            list.add(new ScrapedProductDto(cleanText(name), "", resolveAbsoluteUrl(imgUrl, baseUrl), price,
+            if (name.isEmpty()) {
+                Element titleEl = card.selectFirst(
+                        "a[data-product-title], [data-product-title], h1, h2, h3, h4, h5, h6, .product-title, .title, .woocommerce-loop-product__title, a[class*='title'], [class*='name']");
+                if (titleEl != null) {
+                    name = titleEl.text().trim();
+                }
+            }
+
+            if (name.isEmpty()) {
+                Element linkWithTitle = card.selectFirst("a[title]");
+                if (linkWithTitle != null) {
+                    name = linkWithTitle.attr("title").trim();
+                }
+            }
+
+            if (name.isEmpty() && card.tagName().equalsIgnoreCase("a")) {
+                name = card.text().trim();
+            }
+
+            if (name.isEmpty() || name.length() < 3 || isNonProductTitle(name)) {
+                continue;
+            }
+
+            Element imgEl = card.selectFirst("img.product-main-image, img[class*='product-main-image'], img");
+            if (imgEl != null) {
+                imgUrl = imgEl.hasAttr("data-src") ? imgEl.attr("data-src")
+                        : (imgEl.hasAttr("srcset") ? imgEl.attr("srcset").split(" ")[0]
+                                : (imgEl.hasAttr("data-lazy-src") ? imgEl.attr("data-lazy-src") : imgEl.attr("src")));
+            }
+
+            if (price.isEmpty()) {
+                Element priceEl = card.selectFirst(".product-rrp data, .product-rrp, [data-product-rrp], .price, .product-price, .amount, span[class*='price']");
+                if (priceEl != null) {
+                    price = priceEl.text().trim();
+                }
+            }
+
+            Element linkEl = card.tagName().equalsIgnoreCase("a") ? card : card.selectFirst("a[data-url], a[href]");
+            if (linkEl != null) {
+                productUrl = linkEl.hasAttr("data-url") ? linkEl.attr("data-url") : linkEl.attr("href");
+            }
+
+            list.add(new ScrapedProductDto(cleanText(name), "", resolveAbsoluteUrl(imgUrl, baseUrl), cleanText(price),
                     resolveAbsoluteUrl(productUrl, baseUrl)));
         }
 
         return list;
+    }
+
+    public boolean isNonProductContainer(Element el) {
+        if (el == null) return false;
+        String clsAndId = (el.className() + " " + el.id()).toLowerCase();
+        if (clsAndId.contains("team") || clsAndId.contains("leadership") || clsAndId.contains("testimonial")
+                || clsAndId.contains("review") || clsAndId.contains("author") || clsAndId.contains("footer")
+                || clsAndId.contains("header") || clsAndId.contains("nav") || clsAndId.contains("sidebar")
+                || clsAndId.contains("partner") || clsAndId.contains("client") || clsAndId.contains("sponsor")
+                || clsAndId.contains("avatar") || clsAndId.contains("social") || clsAndId.contains("benefit")) {
+            return true;
+        }
+
+        Element parent = el.parent();
+        int levels = 0;
+        while (parent != null && levels < 3) {
+            String pClsAndId = (parent.className() + " " + parent.id()).toLowerCase();
+            if (pClsAndId.contains("team") || pClsAndId.contains("leadership") || pClsAndId.contains("testimonial")
+                    || pClsAndId.contains("review") || pClsAndId.contains("footer") || pClsAndId.contains("header")
+                    || pClsAndId.contains("partners") || pClsAndId.contains("clients")) {
+                return true;
+            }
+            parent = parent.parent();
+            levels++;
+        }
+        return false;
+    }
+
+    public boolean isNonProductTitle(String title) {
+        if (title == null || title.trim().isEmpty()) return true;
+        String lower = title.trim().toLowerCase();
+
+        if (lower.equals("ceo") || lower.contains("chief executive") || lower.contains("managing director")
+                || lower.contains("founder") || lower.contains("director of") || lower.contains("vice president")
+                || lower.contains("board of directors") || lower.equals("our team") || lower.equals("leadership")) {
+            return true;
+        }
+
+        if (lower.contains("bank offer") || lower.contains("non-returnable") || lower.contains("terms of use")
+                || lower.contains("privacy policy") || lower.contains("terms & conditions")
+                || lower.contains("customer review") || lower.contains("top review") || lower.contains("verified purchase")
+                || lower.equals("add to cart") || lower.equals("buy now") || lower.equals("view all")
+                || lower.equals("read more") || lower.equals("learn more") || lower.equals("quick view")
+                || lower.equals("show details") || lower.equals("contact us") || lower.equals("about us")) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
