@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS))
+                        SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json");
@@ -91,4 +91,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

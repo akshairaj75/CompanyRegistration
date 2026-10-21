@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.companyapp.dto.brand.BrandRequestDto;
@@ -35,6 +36,7 @@ public class BrandServiceImpl implements BrandService {
         return BrandResponseDto.fromEntity(brand);
     }
 
+    @Transactional 
     @Override
     public BrandResponseDto createBrand(MultipartFile file, BrandRequestDto brandRequestDto) {
         
@@ -55,6 +57,7 @@ public class BrandServiceImpl implements BrandService {
         
     }
 
+    @Transactional 
     @Override
     public BrandResponseDto updateBrand(Long id, MultipartFile file, BrandRequestDto brandRequestDto) {
         Brand brand = brandRepository.findById(id).orElseThrow(() -> new RuntimeException("Brand not found"));
@@ -77,6 +80,7 @@ public class BrandServiceImpl implements BrandService {
         return BrandResponseDto.fromEntity(brand);
     }
 
+    @Transactional 
     @Override
     public void deleteBrand(Long id) {
         Brand brand = brandRepository.findById(id)

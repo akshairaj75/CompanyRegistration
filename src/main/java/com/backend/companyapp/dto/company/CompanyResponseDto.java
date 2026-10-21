@@ -35,8 +35,35 @@ public class CompanyResponseDto {
     private List<Long> productIds = new ArrayList<>();
     private List<ProductResponseDto> products = new ArrayList<>();
     private List<String> businessCards = new ArrayList<>();
+    private Long userId;
+    private String userEmail;
+    private String userFullName;
 
     // Getters and Setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+
+    public String getUserFullName() {
+        return userFullName;
+    }
+
+    public void setUserFullName(String userFullName) {
+        this.userFullName = userFullName;
+    }
+
     public List<Long> getBrandIds() {
         return brandIds;
     }
@@ -76,6 +103,7 @@ public class CompanyResponseDto {
     public void setProducts(List<ProductResponseDto> products) {
         this.products = products;
     }
+
     public Long getId() {
         return id;
     }
@@ -251,6 +279,11 @@ public class CompanyResponseDto {
         if (company.getProducts() != null) {
             response.setProductIds(company.getProducts().stream().map(Product::getId).toList());
             response.setProducts(company.getProducts().stream().map(ProductResponseDto::fromEntity).toList());
+        }
+        if (company.getUser() != null) {
+            response.setUserId(company.getUser().getId());
+            response.setUserEmail(company.getUser().getEmail());
+            response.setUserFullName(company.getUser().getFullName());
         }
         return response;
     }

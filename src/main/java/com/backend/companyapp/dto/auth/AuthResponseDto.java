@@ -10,6 +10,7 @@ public class AuthResponseDto {
     private String fullName;
     private String role;
     private long expiresIn;
+    private Long id;
 
     public AuthResponseDto() {
     }
@@ -22,6 +23,14 @@ public class AuthResponseDto {
         this.fullName = fullName;
         this.role = role;
         this.expiresIn = expiresIn;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getToken() {
@@ -88,6 +97,7 @@ public class AuthResponseDto {
         response.setFullName(user.getFullName());
         response.setRole(user.getRole() != null ? user.getRole().toString() : "COMPANY_USER");
         response.setExpiresIn(expiresIn);
+        response.setId(user.getId());
         return response;
     }
 
@@ -95,4 +105,3 @@ public class AuthResponseDto {
         return fromEntity(user, token, 86400000L);
     }
 }
-

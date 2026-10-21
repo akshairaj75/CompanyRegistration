@@ -21,8 +21,17 @@ public class CompanyRequestDto {
     private java.util.List<Long> brandIds = new java.util.ArrayList<>();
     private java.util.List<Long> productIds = new java.util.ArrayList<>();
     private java.util.List<String> existingBusinessCards = new java.util.ArrayList<>();
+    private Long userId;
 
     // Getters and Setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
     public java.util.List<String> getExistingBusinessCards() {
         return existingBusinessCards;
     }

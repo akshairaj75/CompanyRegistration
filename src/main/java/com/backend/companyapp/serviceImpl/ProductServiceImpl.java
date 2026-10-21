@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.companyapp.dto.product.ProductRequestDto;
@@ -15,6 +16,7 @@ import com.backend.companyapp.repository.BrandRepository;
 import com.backend.companyapp.repository.CategoryRepository;
 import com.backend.companyapp.repository.ProductRepository;
 import com.backend.companyapp.service.ProductService;
+
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -44,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
         return ProductResponseDto.fromEntity(product);
     }
 
+    @Transactional 
     @Override
     public ProductResponseDto createProduct(MultipartFile file, ProductRequestDto productRequestDto) {
 
@@ -83,6 +86,7 @@ public class ProductServiceImpl implements ProductService {
         return ProductResponseDto.fromEntity(savedProduct);
     }
 
+    @Transactional 
     @Override
     public ProductResponseDto updateProduct(Long id, MultipartFile file, ProductRequestDto productRequestDto) {
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
@@ -123,6 +127,7 @@ public class ProductServiceImpl implements ProductService {
         return ProductResponseDto.fromEntity(savedProduct);  
     }
 
+    @Transactional 
     @Override
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.backend.companyapp.dto.product.ProductRequestDto;
 import com.backend.companyapp.dto.product.ProductResponseDto;
 import com.backend.companyapp.service.ProductService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,6 +73,7 @@ public class ProductController {
         }
     }
 
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         try {

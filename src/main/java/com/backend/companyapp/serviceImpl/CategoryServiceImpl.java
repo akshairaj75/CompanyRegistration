@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.companyapp.dto.category.CategoryRequestDto;
@@ -23,6 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
         this.fileStorageService = fileStorageService;
     }
 
+    @Transactional 
     @Override
     public CategoryResponseDto createCategory(MultipartFile file, CategoryRequestDto categoryRequestDto) {
         Category category = new Category();
@@ -56,6 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
         return categories.stream().map(CategoryResponseDto::fromEntity).toList();
     }
 
+    @Transactional 
     @Override
     public CategoryResponseDto updateCategory(Long id, MultipartFile file, CategoryRequestDto categoryRequestDto) {
         Category category = categoryRepository.findById(id)
@@ -93,6 +96,7 @@ public class CategoryServiceImpl implements CategoryService {
         return CategoryResponseDto.fromEntity(category);
     }
 
+    @Transactional 
     @Override
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)

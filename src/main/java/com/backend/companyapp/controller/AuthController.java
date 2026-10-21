@@ -39,8 +39,9 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Forbidden", "message", e.getMessage()));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Internal Server Error", "message", "Authentication service error"));
+                    .body(Map.of("error", "Internal Server Error", "message", e.getMessage() != null ? e.getMessage() : "Authentication service error"));
         }
     }
 

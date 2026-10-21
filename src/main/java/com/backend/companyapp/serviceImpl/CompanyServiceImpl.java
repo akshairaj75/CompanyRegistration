@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.companyapp.dto.company.CompanyRequestDto;
@@ -16,6 +17,7 @@ import com.backend.companyapp.entity.Product;
 import com.backend.companyapp.repository.BrandRepository;
 import com.backend.companyapp.repository.CompanyRepository;
 import com.backend.companyapp.repository.ProductRepository;
+import com.backend.companyapp.repository.UserRepository;
 import com.backend.companyapp.service.CompanyService;
 
 @Service
@@ -25,15 +27,18 @@ public class CompanyServiceImpl implements CompanyService {
     private final BrandRepository brandRepository;
     private final ProductRepository productRepository;
     private final FileStorageService fileStorageService;
+    private final UserRepository userRepository;
 
     public CompanyServiceImpl(CompanyRepository companyRepository,
             BrandRepository brandRepository,
             ProductRepository productRepository,
-            FileStorageService fileStorageService) {
+            FileStorageService fileStorageService,
+            UserRepository userRepository) {
         this.companyRepository = companyRepository;
         this.brandRepository = brandRepository;
         this.productRepository = productRepository;
         this.fileStorageService = fileStorageService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -49,9 +54,15 @@ public class CompanyServiceImpl implements CompanyService {
         return CompanyResponseDto.fromEntity(company);
     }
 
+    @Transactional
     @Override
     public CompanyResponseDto createCompany(CompanyRequestDto companyRequestDto, List<MultipartFile> files) {
         Company company = new Company();
+        if (companyRequestDto.getUserId() != null) {
+            userRepository.findById(companyRequestDto.getUserId()).ifPresent(company::setUser);
+        } else if (companyRequestDto.getEmail() != null) {
+            userRepository.findByEmail(companyRequestDto.getEmail()).ifPresent(company::setUser);
+        }
         company.setCompanyName(companyRequestDto.getCompanyName());
         company.setEmail(companyRequestDto.getEmail());
         company.setLandline(companyRequestDto.getLandline());
@@ -107,10 +118,18 @@ public class CompanyServiceImpl implements CompanyService {
         return CompanyResponseDto.fromEntity(savedCompany);
     }
 
+    @Transactional
     @Override
     public CompanyResponseDto updateCompany(Long id, CompanyRequestDto companyRequestDto, List<MultipartFile> files) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found"));
+        if (company.getUser() == null) {
+            if (companyRequestDto.getUserId() != null) {
+                userRepository.findById(companyRequestDto.getUserId()).ifPresent(company::setUser);
+            } else if (companyRequestDto.getEmail() != null) {
+                userRepository.findByEmail(companyRequestDto.getEmail()).ifPresent(company::setUser);
+            }
+        }
         company.setCompanyName(companyRequestDto.getCompanyName());
         company.setEmail(companyRequestDto.getEmail());
         company.setLandline(companyRequestDto.getLandline());
@@ -186,6 +205,7 @@ public class CompanyServiceImpl implements CompanyService {
         return CompanyResponseDto.fromEntity(savedCompany);
     }
 
+    @Transactional
     @Override
     public void deleteCompany(Long id) {
         Company company = companyRepository.findById(id)

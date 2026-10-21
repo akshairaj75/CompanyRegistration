@@ -71,20 +71,16 @@ public class Company {
     private LocalDateTime updatedAt;
 
     @ManyToMany
-    @JoinTable(
-        name = "company_brands",
-        joinColumns = @JoinColumn(name = "company_id"),
-        inverseJoinColumns = @JoinColumn(name = "brand_id")
-    )
+    @JoinTable(name = "company_brands", joinColumns = @JoinColumn(name = "company_id"), inverseJoinColumns = @JoinColumn(name = "brand_id"))
     private Set<Brand> brands = new HashSet<>();
 
     @ManyToMany
-    @JoinTable(
-        name = "company_products",
-        joinColumns = @JoinColumn(name = "company_id"),
-        inverseJoinColumns = @JoinColumn(name = "product_id")
-    )
+    @JoinTable(name = "company_products", joinColumns = @JoinColumn(name = "company_id"), inverseJoinColumns = @JoinColumn(name = "product_id"))
     private Set<Product> products = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @PrePersist
     protected void onCreate() {
@@ -277,5 +273,13 @@ public class Company {
     public void removeProduct(Product product) {
         this.products.remove(product);
         product.getCompanies().remove(this);
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

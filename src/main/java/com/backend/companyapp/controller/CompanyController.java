@@ -15,15 +15,17 @@ import org.springframework.web.bind.annotation.*;
 
 import com.backend.companyapp.dto.company.CompanyRequestDto;
 import com.backend.companyapp.dto.company.CompanyResponseDto;
+import com.backend.companyapp.dto.scraper.ScrapeProductsResponseDto;
+import com.backend.companyapp.enums.UserRole;
+import com.backend.companyapp.security.CustomUserPrincipal;
 import com.backend.companyapp.service.CompanyExcelExportService;
 import com.backend.companyapp.service.CompanyPdfExportService;
 import com.backend.companyapp.service.CompanyService;
+import com.backend.companyapp.service.WebScraperService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.multipart.MultipartFile;
-
-
-import com.backend.companyapp.dto.scraper.ScrapeProductsResponseDto;
-import com.backend.companyapp.service.WebScraperService;
 
 @RestController
 @RequestMapping("/api/company-app/companies")
@@ -34,10 +36,10 @@ public class CompanyController {
     private final CompanyPdfExportService companyPdfExportService;
     private final WebScraperService webScraperService;
 
-    public CompanyController(CompanyService companyService, 
-                             CompanyExcelExportService companyExcelExportService,
-                             CompanyPdfExportService companyPdfExportService,
-                             WebScraperService webScraperService) {
+    public CompanyController(CompanyService companyService,
+            CompanyExcelExportService companyExcelExportService,
+            CompanyPdfExportService companyPdfExportService,
+            WebScraperService webScraperService) {
         this.companyService = companyService;
         this.companyExcelExportService = companyExcelExportService;
         this.companyPdfExportService = companyPdfExportService;
@@ -57,9 +59,10 @@ public class CompanyController {
         String filename = "companies_directory_" + LocalDate.now() + ".xlsx";
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-            .body(file);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
     }
 
     @GetMapping("/export/pdf")
@@ -69,9 +72,9 @@ public class CompanyController {
         String filename = "companies_directory_" + LocalDate.now() + ".pdf";
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(file);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(file);
     }
 
     @GetMapping("/{id}/export/pdf")
@@ -81,9 +84,9 @@ public class CompanyController {
         String filename = "company_" + id + "_profile.pdf";
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(file);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(file);
     }
 
     @GetMapping("/get-all")
@@ -100,10 +103,15 @@ public class CompanyController {
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponseDto> createCompany(
-        @RequestPart("data") CompanyRequestDto companyRequestDto,
-        @RequestPart(name = "files", required = false) List<MultipartFile> files,
-        @RequestPart(name = "file", required = false) MultipartFile file) {
-        
+            @RequestPart("data") CompanyRequestDto companyRequestDto,
+            @RequestPart(name = "files", required = false) List<MultipartFile> files,
+            @RequestPart(name = "file", required = false) MultipartFile file,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        if (principal != null && principal.getUser() != null) {
+            companyRequestDto.setUserId(principal.getUserId());
+        }
+
         List<MultipartFile> allFiles = new java.util.ArrayList<>();
         if (files != null) {
             allFiles.addAll(files);
@@ -117,11 +125,34 @@ public class CompanyController {
 
     @PutMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponseDto> updateCompany(
-        @PathVariable Long id, 
-        @RequestPart("data") CompanyRequestDto companyRequestDto,
-        @RequestPart(name = "files", required = false) List<MultipartFile> files,
-        @RequestPart(name = "file", required = false) MultipartFile file) {
-        
+            @PathVariable Long id,
+            @RequestPart("data") CompanyRequestDto companyRequestDto,
+            @RequestPart(name = "files", required = false) List<MultipartFile> files,
+            @RequestPart(name = "file", required = false) MultipartFile file,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        if (principal == null || principal.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // SUPER_ADMIN has access to update every company. COMPANY_USER is limited to their own company.
+        if (principal.getUser().getRole() != UserRole.SUPER_ADMIN) {
+            CompanyResponseDto existingCompany = companyService.getCompanyById(id);
+            if (existingCompany == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            boolean isOwner = (existingCompany.getUserId() != null && existingCompany.getUserId().equals(principal.getUserId()))
+                    || (existingCompany.getUserId() == null && existingCompany.getEmail() != null
+                            && existingCompany.getEmail().equalsIgnoreCase(principal.getUsername()));
+            if (!isOwner) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
+        if (companyRequestDto.getUserId() == null && principal.getUserId() != null) {
+            companyRequestDto.setUserId(principal.getUserId());
+        }
+
         List<MultipartFile> allFiles = new java.util.ArrayList<>();
         if (files != null) {
             allFiles.addAll(files);
@@ -134,10 +165,17 @@ public class CompanyController {
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteCompany(@PathVariable Long id) {
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Void> deleteCompany(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        if (principal == null || principal.getUser() == null || principal.getUser().getRole() != UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         companyService.deleteCompany(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
-    
 
 }

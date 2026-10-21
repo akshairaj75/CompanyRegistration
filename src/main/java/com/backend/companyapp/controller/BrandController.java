@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.backend.companyapp.dto.brand.BrandRequestDto;
 import com.backend.companyapp.dto.brand.BrandResponseDto;
 import com.backend.companyapp.service.BrandService;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/company-app/brands")
@@ -66,6 +67,7 @@ public class BrandController {
         }
     }
 
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteBrand(@PathVariable Long id) {
         try {
